@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"math"
 	"time"
 
 	"github.com/cbergoon/merkletree"
@@ -19,7 +20,7 @@ type GenesisAccount struct {
 }
 
 type Chain struct {
-	Lock    bool
+	Locked  bool
 	Store   *Store
 	Mempool *Mempool
 }
@@ -36,6 +37,16 @@ func (c *Chain) Init() *Chain {
 	c.ProduceBlock()
 
 	return c
+}
+
+func (c *Chain) Lock() {
+	c.Locked = true
+}
+
+func (c *Chain) Unlock() {
+	c.Locked = false
+
+	c.ProduceBlock()
 }
 
 func (c *Chain) Genesis() bool {
@@ -231,13 +242,15 @@ func (c *Chain) ProduceBlock() error {
 
 		pendingTx := c.Mempool.Length()
 
-		if pendingTx == 0 || c.Lock {
+		if pendingTx == 0 || c.Locked {
 			return nil
 		}
 
+		pendingTx = uint64(math.Min(float64(pendingTx), float64(10)))
+
 		log.Println("Processing new block")
 
-		c.Lock = true
+		c.Lock()
 
 		lastBlock := c.GetBlock(blockHeight)
 
@@ -245,6 +258,7 @@ func (c *Chain) ProduceBlock() error {
 
 		blockTime := time.Now().UnixMilli()
 
+		// take the first 10 transactions
 		for i := uint64(0); i < pendingTx; i++ {
 			pSignedTx := c.Mempool.Get(i)
 
@@ -355,7 +369,7 @@ func (c *Chain) ProduceBlock() error {
 			return nil
 		})
 
-		c.Lock = false
+		c.Unlock()
 	}
 
 	return nil
