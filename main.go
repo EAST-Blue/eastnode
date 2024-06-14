@@ -1,7 +1,7 @@
 package main
 
 import (
-	"east-runtime/chain"
+	"eastnode/chain"
 	"log"
 	"net/http"
 

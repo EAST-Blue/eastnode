@@ -1,4 +1,4 @@
-module east-runtime
+module eastnode
 
 go 1.22.4
 

@@ -1,7 +1,7 @@
 package chain
 
 import (
-	"east-runtime/types"
+	"eastnode/types"
 	"encoding/hex"
 	"encoding/json"
 	"log"

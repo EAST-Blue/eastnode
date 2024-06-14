@@ -1,8 +1,8 @@
 package chain
 
 import (
-	"east-runtime/types"
-	"east-runtime/utils"
+	"eastnode/types"
+	"eastnode/utils"
 	"encoding/json"
 	"log"
 

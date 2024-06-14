@@ -2,7 +2,7 @@ package chain
 
 import (
 	"database/sql"
-	"east-runtime/utils"
+	"eastnode/utils"
 	"fmt"
 	"log"
 	"os"
