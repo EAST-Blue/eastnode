@@ -3,6 +3,7 @@ package chain
 import (
 	"eastnode/types"
 	"eastnode/utils"
+	store "eastnode/utils/store"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -20,18 +21,17 @@ type GenesisAccount struct {
 
 type Chain struct {
 	Lock    bool
-	Store   *Store
+	Store   *store.Store
 	Mempool *Mempool
 }
 
 func (c *Chain) Init() *Chain {
-	c.Store = new(Store)
-	c.Store.Init()
+	c.Store = store.GetInstance()
 
 	c.Mempool = new(Mempool)
 	c.Mempool.Init(c.Store.KV)
 
-	log.Println("Chain initialized")
+	log.Println("[+] chain initialized")
 
 	c.ProduceBlock()
 
@@ -154,7 +154,7 @@ func (c *Chain) ProduceBlock() error {
 				Transaction: hex.EncodeToString(gTxPacked),
 			}
 
-			_, err = c.Store.Engine.Exec(fmt.Sprintf(`
+			_, err = c.Store.Instance.Exec(fmt.Sprintf(`
 				INSERT INTO transactions (id, block_id, signer, receiver, actions, created_at)
 				VALUES ('%s', '%d', '%s', '%s', '%x', '%d');`,
 				gSignedTx.ID, 0, gTx.Signer, gTx.Receiver, actionsPacked, genesisTime,
@@ -168,7 +168,7 @@ func (c *Chain) ProduceBlock() error {
 			})
 		}
 		var workingEngineHash string
-		workingEngineHashRaw := c.Store.Engine.QueryRow("SELECT dolt_hashof_db('WORKING')")
+		workingEngineHashRaw := c.Store.Instance.QueryRow("SELECT dolt_hashof_db('WORKING')")
 		workingEngineHashRaw.Scan(&workingEngineHash)
 
 		newBlock := new(types.Block)
@@ -205,7 +205,7 @@ func (c *Chain) ProduceBlock() error {
 
 		// consensus done
 		// commit block
-		_, err = c.Store.Engine.Exec("CALL DOLT_COMMIT('-Am', 'commit genesis block');")
+		_, err = c.Store.Instance.Exec("CALL DOLT_COMMIT('-Am', 'commit genesis block');")
 
 		if err != nil {
 			panic(err)
@@ -262,7 +262,7 @@ func (c *Chain) ProduceBlock() error {
 				pSignedTx.ID, blockHeight+1, txUnpacked.Signer, txUnpacked.Receiver, txUnpacked.Actions, blockTime,
 			)
 
-			_, err = c.Store.Engine.Exec(q)
+			_, err = c.Store.Instance.Exec(q)
 			if err != nil {
 				panic(err)
 			}
@@ -274,7 +274,7 @@ func (c *Chain) ProduceBlock() error {
 		}
 
 		var workingEngineHash string
-		workingEngineHashRaw := c.Store.Engine.QueryRow("SELECT dolt_hashof_db('WORKING')")
+		workingEngineHashRaw := c.Store.Instance.QueryRow("SELECT dolt_hashof_db('WORKING')")
 		workingEngineHashRaw.Scan(&workingEngineHash)
 
 		log.Println("new storage hash: " + workingEngineHash)
@@ -319,7 +319,7 @@ func (c *Chain) ProduceBlock() error {
 
 		// consensus done
 		// commit block
-		_, err = c.Store.Engine.Exec(fmt.Sprintf(`
+		_, err = c.Store.Instance.Exec(fmt.Sprintf(`
 			CALL DOLT_COMMIT('-Am', 'commit new block %d');
 		`, newBlock.Header.Height))
 
@@ -333,7 +333,7 @@ func (c *Chain) ProduceBlock() error {
 		}
 
 		var cEngineHash string
-		cEngineHashRaw := c.Store.Engine.QueryRow("SELECT dolt_hashof_db()")
+		cEngineHashRaw := c.Store.Instance.QueryRow("SELECT dolt_hashof_db()")
 		cEngineHashRaw.Scan(&cEngineHash)
 
 		log.Println("check storage hash: " + cEngineHash)

@@ -1,0 +1,13 @@
+{
+  "name": "eastnode",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:hdriqi/eastnode.git",
+  "author": "East Dev",
+  "license": "TBD",
+  "scripts": {
+    "run-cmd": "go run cmd/main.go",
+    "build-as": "cd wasm-sdk; yarn asbuild; cp build/release.wasm ../build/release.wasm",
+    "build:rpc": "go build -o build/rpc cmd/json-rpc/main.go "
+  }
+}

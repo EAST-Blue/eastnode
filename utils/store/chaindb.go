@@ -1,7 +1,6 @@
-package chain
+package utils
 
 import (
-	"database/sql"
 	"eastnode/utils"
 	"fmt"
 	"log"
@@ -11,22 +10,11 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-type Store struct {
-	KV     *bolt.DB
-	Engine *sql.DB
-}
-
-func (s *Store) Init() {
-	engine, err := sql.Open("dolt", "file://"+utils.Cwd()+"/db?commitname=root&commitemail=root@east&multistatements=true")
-
-	if err != nil {
-		panic(err)
-	}
-
+func (s *Store) InitChainDb() {
 	// init core schema
 	if _, err := os.Stat(utils.Cwd() + "/db/core"); os.IsNotExist(err) {
 		fmt.Println("Runtime is initializing...")
-		_, err := engine.Exec(`
+		_, err := s.Instance.Exec(`
 			CREATE DATABASE core;
 			USE core;
 			CREATE TABLE kv (
@@ -50,15 +38,15 @@ func (s *Store) Init() {
 			panic(err)
 		}
 	} else {
-		engine.Exec("USE core")
-		_, err = engine.Exec("CALL DOLT_RESET('--hard')")
+		s.Instance.Exec("USE core")
+		_, err = s.Instance.Exec("CALL DOLT_RESET('--hard')")
 
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	log.Println("storage engine is running")
+	log.Println("[+] Chain database instance is running")
 
 	kv, err := bolt.Open("db/chain.db", 0600, nil)
 	if err != nil {
@@ -86,12 +74,11 @@ func (s *Store) Init() {
 	}
 	log.Println("storage kv is running")
 
-	s.Engine = engine
 	s.KV = kv
 }
 
 func (s *Store) Close() error {
-	if err := s.Engine.Close(); err != nil {
+	if err := s.Instance.Close(); err != nil {
 		return err
 	}
 	if err := s.KV.Close(); err != nil {
