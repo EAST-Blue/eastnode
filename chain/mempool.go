@@ -56,13 +56,6 @@ func (q *Mempool) Enqueue(inputTx types.SignedTransaction) {
 			return err
 		}
 
-		// todo: check tx valid
-		// check hash = sha256(signature)
-		// verify signature = secp256k1.ecdsaVerify(signature, hashedTx, pubKey)
-
-		// inputTx.ID = utils.SHA256([]byte(inputTx.Signature))
-		// inputTx.Action, err = json.Un(inputTx.Transaction)
-
 		inputTxBuf, err := json.Marshal(inputTx)
 		head := index - 1
 

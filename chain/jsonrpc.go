@@ -27,17 +27,13 @@ func (s *Jsonrpc) Mutate(r *http.Request, params *string, reply *types.RpcReply)
 
 	txIsValid := newSignedTx.IsValid()
 
-	// newTransaction := new(types.Transaction)
-
-	// json.Unmarshal([]byte(decodedArgs), newTransaction)
-
-	// s.Chain.Mempool.Enqueue(*newTransaction)
-
-	// s.Chain.ProduceBlock()
-
 	if txIsValid {
 		// add to mempool, signal to produce new block
 		log.Println("adding to mempool")
+
+		s.Chain.Mempool.Enqueue(*newSignedTx)
+
+		s.Chain.ProduceBlock()
 
 		*reply = types.RpcReply{
 			BlockHash:   blockHash,
