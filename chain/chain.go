@@ -275,7 +275,16 @@ func (c *Chain) ProduceBlock() error {
 
 			// Process actions
 
+			parsedActions := new([]types.Action)
+			utils.DecodeHexAndBorshDeserialize(parsedActions, txUnpacked.Actions)
+
+			for _, action := range *parsedActions {
+				if action.Kind == "deploy" {
+					c.ProcessDeploy(*txUnpacked, action)
+				}
+			}
 			// Deploy ProcessDeploy()
+			// Deploy ProcessRedeploy()
 			// Call
 			// View
 
@@ -383,46 +392,45 @@ func (c *Chain) ProduceBlock() error {
 	return nil
 }
 
-func (c *Chain) ProcessDeploy(tx types.Transaction) string {
-	parsedActions := new([]types.Action)
-	utils.DecodeHexAndBorshDeserialize(parsedActions, tx.Actions)
-
+func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string {
 	txSerialized, err := borsh.Serialize(tx)
 	if err != nil {
 		panic(err)
 	}
 
-	// generate contract account based on the initial tx
-	txHash, err := hex.DecodeString(utils.SHA256(txSerialized))
-	if err != nil {
-		panic(err)
-	}
-
-	smartIndexAddress, err := bech32.EncodeFromBase256("idx", txHash)
-	if err != nil {
-		panic(err)
-	}
-
 	// TODO: Validate wasm file
-	wasmBytes := (*parsedActions)[0].Args[0]
+	wasmBytes := action.Args[0]
 
-	q := fmt.Sprintf(`
+	var q string
+	var smartIndexAddress string
+
+	if len(action.Args) == 1 { // new smart index
+		// generate contract account based on the initial tx
+		txHash, err := hex.DecodeString(utils.SHA256(txSerialized))
+		if err != nil {
+			panic(err)
+		}
+
+		smartIndexAddress, err = bech32.EncodeFromBase256("idx", txHash)
+		if err != nil {
+			panic(err)
+		}
+		q = fmt.Sprintf(`
 				INSERT INTO smart_index (smart_index_address, owner_address, wasm_blob)
 				VALUES ('%s', '%s', x'%s');`, smartIndexAddress, tx.Signer, wasmBytes,
-	)
+		)
+	} else { // redeploy
+		smartIndexAddress = action.Args[1]
+		q = fmt.Sprintf(`
+				UPDATE smart_index SET wasm_blob = x'%s' WHERE smart_index_address = '%s';`, wasmBytes, smartIndexAddress,
+		)
+	}
 
 	_, err = c.Store.Instance.Exec(q)
 	if err != nil {
-		panic(err)
+		// TODO: handle error here, do not panic
+		// log.Panicln(err)
 	}
 
 	return smartIndexAddress
-}
-
-func processRedeploy(tx types.SignedTransaction) {
-	// parsedActions := tx.Actions
-
-	// check ownership
-
-	// update dolt contracts : owner_address | smart_index_address | wasm_blob
 }
