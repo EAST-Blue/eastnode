@@ -10,6 +10,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/btcsuite/btcd/btcutil/bech32"
 	"github.com/cbergoon/merkletree"
 	"github.com/near/borsh-go"
 	bolt "go.etcd.io/bbolt"
@@ -21,6 +22,7 @@ type GenesisAccount struct {
 }
 
 type Chain struct {
+	// TODO: use sync.Mutex https://go.dev/tour/concurrency/9
 	Locked  bool
 	Store   *store.Store
 	Mempool *Mempool
@@ -260,15 +262,10 @@ func (c *Chain) ProduceBlock() error {
 
 		// take the first 10 transactions
 		for i := uint64(0); i < pendingTx; i++ {
-			pSignedTx := c.Mempool.Get(i)
-
-			txInHex, err := hex.DecodeString(pSignedTx.Transaction)
-			if err != nil {
-				panic(err)
-			}
+			pSignedTx := c.Mempool.Get(i) // ensure pushback
 
 			txUnpacked := new(types.Transaction)
-			borsh.Deserialize(*txUnpacked, txInHex)
+			utils.DecodeHexAndBorshDeserialize(*txUnpacked, pSignedTx.Transaction)
 
 			q := fmt.Sprintf(`
 				INSERT INTO transactions (id, block_id, signer, receiver, actions, created_at)
@@ -276,7 +273,17 @@ func (c *Chain) ProduceBlock() error {
 				pSignedTx.ID, blockHeight+1, txUnpacked.Signer, txUnpacked.Receiver, txUnpacked.Actions, blockTime,
 			)
 
-			_, err = c.Store.Instance.Exec(q)
+			// Process actions
+
+			// Deploy ProcessDeploy()
+			// Call
+			// View
+
+			// Exec into DB
+
+			// If invalid, don't exec. Remove from mempool
+
+			_, err := c.Store.Instance.Exec(q)
 			if err != nil {
 				panic(err)
 			}
@@ -352,6 +359,7 @@ func (c *Chain) ProduceBlock() error {
 
 		log.Println("check storage hash: " + cEngineHash)
 
+		// REFACTOR: block commit to a new function. duplicate with genesis block up there.
 		c.Store.KV.Update(func(tx *bolt.Tx) error {
 			bBlocks := tx.Bucket([]byte("blocks"))
 			bCommon := tx.Bucket([]byte("common"))
@@ -373,4 +381,48 @@ func (c *Chain) ProduceBlock() error {
 	}
 
 	return nil
+}
+
+func (c *Chain) ProcessDeploy(tx types.Transaction) string {
+	parsedActions := new([]types.Action)
+	utils.DecodeHexAndBorshDeserialize(parsedActions, tx.Actions)
+
+	txSerialized, err := borsh.Serialize(tx)
+	if err != nil {
+		panic(err)
+	}
+
+	// generate contract account based on the initial tx
+	txHash, err := hex.DecodeString(utils.SHA256(txSerialized))
+	if err != nil {
+		panic(err)
+	}
+
+	smartIndexAddress, err := bech32.EncodeFromBase256("idx", txHash)
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO: Validate wasm file
+	wasmBytes := (*parsedActions)[0].Args[0]
+
+	q := fmt.Sprintf(`
+				INSERT INTO smart_index (smart_index_address, owner_address, wasm_blob)
+				VALUES ('%s', '%s', x'%s');`, smartIndexAddress, tx.Signer, wasmBytes,
+	)
+
+	_, err = c.Store.Instance.Exec(q)
+	if err != nil {
+		panic(err)
+	}
+
+	return smartIndexAddress
+}
+
+func processRedeploy(tx types.SignedTransaction) {
+	// parsedActions := tx.Actions
+
+	// check ownership
+
+	// update dolt contracts : owner_address | smart_index_address | wasm_blob
 }

@@ -24,6 +24,14 @@ export function init(): void {
   createTable(ORDINALS_TABLE_NAME, ORDINALS_PRIMARY_KEY, generatedSchema);
 }
 
+export function getOrdinal(id: string): string {
+  const whereCondition = toSchema([new Column("id", id)]);
+  const ptr = selectItems(ORDINALS_TABLE_NAME, whereCondition)
+  const result = toString(ptr);
+
+  return result;
+}
+
 export function insertItemTest(): void {
   // will be casted
   const values = toSchema([

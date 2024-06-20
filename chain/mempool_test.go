@@ -10,8 +10,8 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func initTest() *Mempool {
-	clearTest()
+func initMempoolTest() *Mempool {
+	clearMempoolTest()
 	if err := os.Mkdir("db_test", os.ModeDir|0755); err != nil {
 		log.Panicln(err)
 	}
@@ -30,15 +30,15 @@ func initTest() *Mempool {
 	return mempool
 }
 
-func clearTest() {
+func clearMempoolTest() {
 	if err := os.RemoveAll("db_test"); err != nil {
 		log.Panicln(err)
 	}
 }
 
 func TestMempool(t *testing.T) {
-	mempool := initTest()
-	defer t.Cleanup(clearTest)
+	mempool := initMempoolTest()
+	defer t.Cleanup(clearMempoolTest)
 
 	length := 15
 

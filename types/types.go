@@ -2,12 +2,12 @@ package types
 
 import (
 	"crypto/sha256"
+	"eastnode/utils"
 	"encoding/hex"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cbergoon/merkletree"
 	"github.com/dustinxie/ecc"
-	"github.com/near/borsh-go"
 )
 
 // Kind: ["call", "view", "deploy", "genesis"]
@@ -35,15 +35,7 @@ type SignedTransaction struct {
 func (st *SignedTransaction) IsValid() bool {
 	txUnpacked := new(Transaction)
 
-	txBytes, err := hex.DecodeString(st.Transaction)
-	if err != nil {
-		panic(err)
-	}
-
-	err = borsh.Deserialize(txUnpacked, txBytes)
-	if err != nil {
-		panic(err)
-	}
+	txBytes := utils.DecodeHexAndBorshDeserialize(txUnpacked, st.Transaction)
 
 	pubKeyBytes, err := hex.DecodeString(txUnpacked.Signer)
 	if err != nil {
@@ -64,6 +56,10 @@ func (st *SignedTransaction) IsValid() bool {
 	verified := ecc.VerifyBytes(pubKey.ToECDSA(), hashedMsg[:], sigBytes, ecc.Normal)
 
 	return verified
+}
+
+func DecodeHexAndBorshDeserialize(txUnpacked *Transaction, s string) {
+	panic("unimplemented")
 }
 
 // Signer str, Receiver str, Actions hex
@@ -100,6 +96,7 @@ func (t MerkleTreeContent) Equals(other merkletree.Content) (bool, error) {
 
 type BlockHeader struct {
 	ChainID     string
+	BitcoinHash string
 	Height      uint64
 	Time        int64
 	LastBlockID []byte

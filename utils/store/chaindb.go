@@ -31,6 +31,12 @@ func (s *Store) InitChainDb() {
 				created_at BIGINT,
 				primary key(id)
 			);
+			CREATE TABLE smart_index (
+				smart_index_address VARCHAR(255),
+				owner_address VARCHAR(255),
+				wasm_blob BLOB,
+				primary key(smart_index_address)
+			);
 			CALL DOLT_COMMIT('-Am', 'init core schema');
 		`)
 

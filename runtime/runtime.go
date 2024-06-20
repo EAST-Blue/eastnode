@@ -3,11 +3,9 @@ package runtime
 import (
 	"bytes"
 	"context"
-	"crypto/sha1"
 	store "eastnode/utils/store"
 	utils "eastnode/utils/store"
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -82,30 +80,30 @@ func (r *WasmRuntime) writeString(memory api.Memory, str string) uint32 {
 	return uint32(stringOffset)
 }
 
-func (r *WasmRuntime) UploadWASM(wasmBytes []byte) int64 {
-	ctx := context.Background()
-
-	h := sha1.New()
-	h.Write(wasmBytes)
-	sha1Hash := hex.EncodeToString(h.Sum(nil))
-
-	rowWasmBytes := &utils.WasmBytes{Hash: sha1Hash, Bytes: wasmBytes}
-
-	var result = &utils.WasmBytes{}
-	err := r.s.BunInstance.NewSelect().Model(result).Where("hash = ?", sha1Hash).Scan(ctx)
-
-	if err != nil {
-		_, err = r.s.BunInstance.NewInsert().Model(rowWasmBytes).Exec(ctx)
-		if err != nil {
-			log.Panicln(err)
-		}
-		r.s.BunInstance.NewSelect().Model(result).Where("hash = ?", sha1Hash).Scan(ctx)
-		return result.ID
-	} else {
-		return result.ID
-	}
-
-}
+// func (r *WasmRuntime) UploadWASM(wasmBytes []byte) int64 {
+// 	ctx := context.Background()
+//
+// 	h := sha1.New()
+// 	h.Write(wasmBytes)
+// 	sha1Hash := hex.EncodeToString(h.Sum(nil))
+//
+// 	rowWasmBytes := &utils.WasmBytes{Hash: sha1Hash, Bytes: wasmBytes}
+//
+// 	var result = &utils.WasmBytes{}
+// 	err := r.s.BunInstance.NewSelect().Model(result).Where("hash = ?", sha1Hash).Scan(ctx)
+//
+// 	if err != nil {
+// 		_, err = r.s.BunInstance.NewInsert().Model(rowWasmBytes).Exec(ctx)
+// 		if err != nil {
+// 			log.Panicln(err)
+// 		}
+// 		r.s.BunInstance.NewSelect().Model(result).Where("hash = ?", sha1Hash).Scan(ctx)
+// 		return result.ID
+// 	} else {
+// 		return result.ID
+// 	}
+//
+// }
 
 func (r *WasmRuntime) ParseAndRunTx() {
 	// TODO: get caller address, contract, functionName, and params.

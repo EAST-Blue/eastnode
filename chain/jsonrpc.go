@@ -2,12 +2,10 @@ package chain
 
 import (
 	"eastnode/types"
-	"encoding/hex"
+	"eastnode/utils"
 	"encoding/json"
 	"log"
 	"net/http"
-
-	"github.com/near/borsh-go"
 )
 
 type Jsonrpc struct {
@@ -20,10 +18,8 @@ func (s *Jsonrpc) Mutate(r *http.Request, params *string, reply *types.RpcReply)
 	blockHeight := s.Chain.GetBlockHeight()
 	blockHash := s.Chain.GetBlockHash(blockHeight)
 
-	var decodedParams, _ = hex.DecodeString(*params)
-
 	newSignedTx := new(types.SignedTransaction)
-	borsh.Deserialize(newSignedTx, decodedParams)
+	utils.DecodeHexAndBorshDeserialize(newSignedTx, *params)
 
 	txIsValid := newSignedTx.IsValid()
 
