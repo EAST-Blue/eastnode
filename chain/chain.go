@@ -262,13 +262,13 @@ func (c *Chain) ProduceBlock() error {
 		for i := uint64(0); i < pendingTx; i++ {
 			pSignedTx := c.Mempool.Get(i)
 
-			txInHex, err := hex.DecodeString(pSignedTx.Transaction)
+			txInBytes, err := hex.DecodeString(pSignedTx.Transaction)
 			if err != nil {
 				panic(err)
 			}
 
 			txUnpacked := new(types.Transaction)
-			borsh.Deserialize(*txUnpacked, txInHex)
+			borsh.Deserialize(txUnpacked, txInBytes)
 
 			q := fmt.Sprintf(`
 				INSERT INTO transactions (id, block_id, signer, receiver, actions, created_at)
