@@ -143,8 +143,8 @@ func (s *Store) ShowTables() {
 }
 
 func (s *Store) InitWasmDB() {
-	s.Instance.Exec("CREATE DATABASE States")
-	s.Instance.Exec("Use States")
+	s.Instance.Exec("CREATE DATABASE states")
+	s.Instance.Exec("Use states")
 
 	bundb := bun.NewDB(s.Instance, mysqldialect.New())
 	bundb.AddQueryHook(bundebug.NewQueryHook(

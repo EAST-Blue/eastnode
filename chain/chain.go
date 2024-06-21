@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"eastnode/runtime"
 	"eastnode/types"
 	"eastnode/utils"
 	store "eastnode/utils/store"
@@ -8,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/btcsuite/btcd/btcutil/bech32"
@@ -23,16 +25,19 @@ type GenesisAccount struct {
 
 type Chain struct {
 	// TODO: use sync.Mutex https://go.dev/tour/concurrency/9
-	Locked  bool
-	Store   *store.Store
-	Mempool *Mempool
+	Locked      bool
+	Store       *store.Store
+	Mempool     *Mempool
+	WasmRuntime *runtime.WasmRuntime
 }
 
 func (c *Chain) Init() *Chain {
-	c.Store = store.GetInstance()
+	c.Store = store.GetInstance(store.ChainDB)
 
 	c.Mempool = new(Mempool)
 	c.Mempool.Init(c.Store.KV)
+
+	c.WasmRuntime = &runtime.WasmRuntime{Store: *store.GetInstance(store.SmartIndexDB)}
 
 	log.Println("[+] chain initialized")
 
@@ -279,18 +284,14 @@ func (c *Chain) ProduceBlock() error {
 			utils.DecodeHexAndBorshDeserialize(parsedActions, txUnpacked.Actions)
 
 			for _, action := range *parsedActions {
-				if action.Kind == "deploy" {
+				if action.Kind == "deploy" || action.Kind == "redeploy" {
 					c.ProcessDeploy(*txUnpacked, action)
+				} else if action.Kind == "call" {
+					c.ProcessCall(*txUnpacked, action)
+				} else if action.Kind == "view" {
+					// TODO: handle view function in the front, before going into produce block, so there'll be no view function here
 				}
 			}
-			// Deploy ProcessDeploy()
-			// Deploy ProcessRedeploy()
-			// Call
-			// View
-
-			// Exec into DB
-
-			// If invalid, don't exec. Remove from mempool
 
 			_, err := c.Store.Instance.Exec(q)
 			if err != nil {
@@ -392,6 +393,30 @@ func (c *Chain) ProduceBlock() error {
 	return nil
 }
 
+func (c *Chain) ProcessCall(tx types.Transaction, action types.Action) {
+	smartIndexAddress := tx.Receiver
+	functionName := action.FunctionName
+
+	args := action.Args
+
+	argsInt64 := make([]uint64, len(args))
+
+	for i := range argsInt64 {
+		convertedInt, err := strconv.Atoi(args[i])
+
+		if err != nil {
+			log.Panicln(err)
+		}
+		argsInt64[i] = uint64(convertedInt)
+	}
+
+	var resultWasmBlob []byte
+	sr := c.Store.Instance.QueryRow(fmt.Sprintf("SELECT wasm_blob FROM smart_index WHERE smart_index_address = '%s';", smartIndexAddress))
+	sr.Scan(&resultWasmBlob)
+
+	c.WasmRuntime.RunWasmFunction(runtime.Address(tx.Signer), resultWasmBlob, smartIndexAddress, functionName, argsInt64, action.Kind)
+}
+
 func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string {
 	txSerialized, err := borsh.Serialize(tx)
 	if err != nil {
@@ -415,6 +440,10 @@ func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string 
 		if err != nil {
 			panic(err)
 		}
+
+		// maximum length is 64, trimmed this to 32 chars
+		smartIndexAddress = smartIndexAddress[:32]
+
 		q = fmt.Sprintf(`
 				INSERT INTO smart_index (smart_index_address, owner_address, wasm_blob)
 				VALUES ('%s', '%s', x'%s');`, smartIndexAddress, tx.Signer, wasmBytes,

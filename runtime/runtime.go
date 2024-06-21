@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"context"
 	store "eastnode/utils/store"
-	utils "eastnode/utils/store"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -28,8 +26,8 @@ const (
 type Address string
 
 type WasmRuntime struct {
-	s   store.Store
-	Mod api.Module
+	Store store.Store
+	Mod   api.Module
 }
 
 // ref: https://github.com/RPG-18/wasmer-go-assemblyscript/blob/main/assemblyscript/go.ts
@@ -80,91 +78,78 @@ func (r *WasmRuntime) writeString(memory api.Memory, str string) uint32 {
 	return uint32(stringOffset)
 }
 
-// func (r *WasmRuntime) UploadWASM(wasmBytes []byte) int64 {
-// 	ctx := context.Background()
-//
-// 	h := sha1.New()
-// 	h.Write(wasmBytes)
-// 	sha1Hash := hex.EncodeToString(h.Sum(nil))
-//
-// 	rowWasmBytes := &utils.WasmBytes{Hash: sha1Hash, Bytes: wasmBytes}
-//
-// 	var result = &utils.WasmBytes{}
-// 	err := r.s.BunInstance.NewSelect().Model(result).Where("hash = ?", sha1Hash).Scan(ctx)
-//
-// 	if err != nil {
-// 		_, err = r.s.BunInstance.NewInsert().Model(rowWasmBytes).Exec(ctx)
-// 		if err != nil {
-// 			log.Panicln(err)
-// 		}
-// 		r.s.BunInstance.NewSelect().Model(result).Where("hash = ?", sha1Hash).Scan(ctx)
-// 		return result.ID
-// 	} else {
-// 		return result.ID
-// 	}
-//
-// }
-
-func (r *WasmRuntime) ParseAndRunTx() {
-	// TODO: get caller address, contract, functionName, and params.
-}
-
-func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context) api.Module {
+func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndexAddress string, caller Address, kind string) api.Module {
 	wazeroRuntime := wazero.NewRuntime(ctx)
 
 	envBuilder := wazeroRuntime.
 		NewHostModuleBuilder("env").
 		NewFunctionBuilder().
 		WithFunc(func(tableName int32, primaryKey int32, tableSchema int32) int32 {
+			if kind != "call" {
+				log.Panicln("Cannot call function on view")
+				return 0
+			}
 			tableNameStr := ToString(r.Mod.Memory(), int64(tableName))
 			primaryKeyStr := ToString(r.Mod.Memory(), int64(primaryKey))
 			tableSchemaStr := ToString(r.Mod.Memory(), int64(tableSchema))
 
 			// TODO: get contract address from blockchain
-			CreateTable(r.s, "contractAddress", tableNameStr, primaryKeyStr, tableSchemaStr)
+			CreateTable(r.Store, smartIndexAddress, tableNameStr, primaryKeyStr, tableSchemaStr)
 
 			// WORKAROUND: showTables()
-			r.s.ShowTables()
+			r.Store.ShowTables()
 			return 0
 		}).
 		Export("createTable").
 		NewFunctionBuilder().
 		WithFunc(func(tableName int32, values int32) int32 {
+			if kind != "call" {
+				log.Panicln("Cannot call function on view")
+				return 0
+			}
 			tableNameStr := ToString(r.Mod.Memory(), int64(tableName))
 			valuesStr := ToString(r.Mod.Memory(), int64(values))
 
 			// TODO: get contract address from blockchain
-			Insert(r.s, "contractAddress", tableNameStr, valuesStr)
+			Insert(r.Store, smartIndexAddress, tableNameStr, valuesStr)
 
 			// WORKAROUND: showTables()
-			r.s.ShowTables()
+			r.Store.ShowTables()
 			return 0
 		}).
 		Export("insertItem").
 		NewFunctionBuilder().
 		WithFunc(func(tableName int32, whereCondition int32, values int32) int32 {
+			if kind != "call" {
+				log.Panicln("Cannot call function on view")
+				return 0
+			}
 			tableNameStr := ToString(r.Mod.Memory(), int64(tableName))
 			whereConditionStr := ToString(r.Mod.Memory(), int64(whereCondition))
 			valuesStr := ToString(r.Mod.Memory(), int64(values))
 
 			// TODO: get contract address from blockchain
-			Update(r.s, "contractAddress", tableNameStr, whereConditionStr, valuesStr)
+			Update(r.Store, smartIndexAddress, tableNameStr, whereConditionStr, valuesStr)
 
 			// WORKAROUND: showTables()
-			r.s.ShowTables()
+			r.Store.ShowTables()
 			return 0
 		}).
 		Export("updateItem").
 		NewFunctionBuilder().
 		WithFunc(func(tableName int32, whereCondition int32) int32 {
+			if kind != "call" {
+				log.Panicln("Cannot call function on view")
+				return 0
+			}
 			tableNameStr := ToString(r.Mod.Memory(), int64(tableName))
 			whereConditionStr := ToString(r.Mod.Memory(), int64(whereCondition))
 
 			// TODO: get contract address from blockchain
-			Delete(r.s, "contractAddress", tableNameStr, whereConditionStr)
+			Delete(r.Store, smartIndexAddress, tableNameStr, whereConditionStr)
 
 			// WORKAROUND: showTables()
-			r.s.ShowTables()
+			r.Store.ShowTables()
 			return 0
 		}).
 		Export("deleteItem").
@@ -174,7 +159,7 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context) api.Module
 			whereConditionStr := ToString(r.Mod.Memory(), int64(whereCondition))
 
 			// TODO: get contract address from blockchain
-			result := Select(r.s, "contractAddress", tableNameStr, whereConditionStr)
+			result := Select(r.Store, smartIndexAddress, tableNameStr, whereConditionStr)
 
 			ptr := r.writeString(r.Mod.Memory(), result)
 
@@ -210,23 +195,15 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context) api.Module
 	return mod
 }
 
-func (r *WasmRuntime) RunWasmFunction(caller Address, codeId int, functionName string, jsonParams string) any {
+func (r *WasmRuntime) RunWasmFunction(caller Address, wasmBytes []byte, smartIndexAddress string, functionName string, args []uint64, kind string) any {
 	ctx := context.Background()
 	defer ctx.Done()
 
-	var wasmBytes = &utils.WasmBytes{}
-	r.s.BunInstance.NewSelect().Model(wasmBytes).Where("id = ?", codeId).Scan(ctx)
-
-	var objmap map[string]any
-	if err := json.Unmarshal([]byte(jsonParams), &objmap); err != nil {
-		log.Fatal(err)
-	}
-
-	mod := r.loadWasm(wasmBytes.Bytes, ctx)
+	mod := r.loadWasm(wasmBytes, ctx, smartIndexAddress, caller, kind)
 	f := mod.ExportedFunction(functionName)
-	result, err := f.Call(ctx)
-	// result, err := f.Call(ctx, uint64(objmap["first"].(float64)), uint64(objmap["second"].(float64)))
-	// result, err := f.Call(ctx)
+
+	// TODO: handle string input
+	result, err := f.Call(ctx, args...)
 
 	if err != nil {
 		log.Panicln(err)

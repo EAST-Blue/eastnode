@@ -9,22 +9,30 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func GetFakeInstance() *Store {
-	if s == nil {
+func GetFakeInstance(instanceType InstanceType) *Store {
+	if instanceType == SmartIndexDB && sSmartIndex != nil {
+		return sSmartIndex
+	} else if instanceType == ChainDB && sChain != nil {
+		return sChain
+	} else {
 		lock.Lock()
 		defer lock.Unlock()
-		if s == nil {
-			os.Mkdir("db_test", 0700)
+		os.Mkdir("db_test", 0700)
 
-			doltInstance, err := sql.Open("dolt", "file://"+utils.Cwd()+"/db_test?commitname=root&commitemail=root@east&multistatements=true")
+		doltInstance, err := sql.Open("dolt", "file://"+utils.Cwd()+"/db_test?commitname=root&commitemail=root@east&multistatements=true")
 
-			if err != nil {
-				log.Panicln(err)
-			}
+		if err != nil {
+			log.Panicln(err)
+		}
 
-			s = &Store{Instance: doltInstance}
-			s.InitWasmDB()
-			s.Instance.Exec(`
+		if instanceType == SmartIndexDB {
+			sSmartIndex = &Store{Instance: doltInstance}
+			sSmartIndex.InitWasmDB()
+			return sSmartIndex
+		} else {
+			sChain = &Store{Instance: doltInstance}
+
+			sChain.Instance.Exec(`
 				CREATE DATABASE core;
 				USE core;
 				CREATE TABLE kv (
@@ -75,9 +83,8 @@ func GetFakeInstance() *Store {
 				panic(err)
 			}
 
-			s.KV = kv
+			sChain.KV = kv
+			return sChain
 		}
 	}
-
-	return s
 }

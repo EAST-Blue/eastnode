@@ -10,12 +10,6 @@ import (
 	dynamicstruct "github.com/ompluscator/dynamic-struct"
 )
 
-// Host function to DB
-// CreateTable
-// Insert
-// Select
-// Update
-
 var ContractTableSeparator string = "_"
 
 func CreateTable(s store.Store, contractAddress string, tableName string, primaryKey string, schema string) {
