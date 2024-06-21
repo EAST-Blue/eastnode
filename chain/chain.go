@@ -4,8 +4,10 @@ import (
 	"eastnode/types"
 	"eastnode/utils"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
+	"math"
 	"time"
 
 	"github.com/cbergoon/merkletree"
@@ -19,7 +21,7 @@ type GenesisAccount struct {
 }
 
 type Chain struct {
-	Lock    bool
+	Locked  bool
 	Store   *Store
 	Mempool *Mempool
 }
@@ -36,6 +38,16 @@ func (c *Chain) Init() *Chain {
 	c.ProduceBlock()
 
 	return c
+}
+
+func (c *Chain) Lock() {
+	c.Locked = true
+}
+
+func (c *Chain) Unlock() {
+	c.Locked = false
+
+	c.ProduceBlock()
 }
 
 func (c *Chain) Genesis() bool {
@@ -95,6 +107,62 @@ func (c *Chain) GetBlock(blockHeight uint64) types.Block {
 	})
 
 	return *block
+}
+
+func (c *Chain) GetNonce(pubKey string) uint64 {
+	nonce := uint64(0)
+
+	err := c.Store.KV.View(func(tx *bolt.Tx) error {
+		bNonce := tx.Bucket([]byte("nonce"))
+		lastNonce := bNonce.Get([]byte(pubKey))
+
+		if lastNonce != nil {
+			nonce = utils.Btoi(lastNonce)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	return nonce
+}
+
+func (c *Chain) CheckTx(signedTx types.SignedTransaction) error {
+	// check signature valid
+	verified := signedTx.IsValid()
+
+	// unpack signedTx
+	inputTx := signedTx.Unpack()
+
+	err := c.Store.KV.View(func(tx *bolt.Tx) error {
+		bNonce := tx.Bucket([]byte("nonce"))
+		lastNonce := bNonce.Get([]byte(inputTx.Signer))
+
+		// if lastNonce not exist, this is the first transaction
+		if lastNonce == nil {
+			return nil
+		}
+
+		// if lastNonce exist, check if current nonce larger than last nonce
+		if inputTx.Nonce > utils.Btoi(lastNonce) {
+			return nil
+		}
+
+		return errors.New("invalid nonce")
+	})
+
+	if verified && err == nil {
+		return nil
+	}
+
+	if !verified {
+		return errors.New("invalid signature")
+	}
+
+	return err
 }
 
 func (c *Chain) ProduceBlock() error {
@@ -231,13 +299,15 @@ func (c *Chain) ProduceBlock() error {
 
 		pendingTx := c.Mempool.Length()
 
-		if pendingTx == 0 || c.Lock {
+		if pendingTx == 0 || c.Locked {
 			return nil
 		}
 
+		pendingTx = uint64(math.Min(float64(pendingTx), float64(10)))
+
 		log.Println("Processing new block")
 
-		c.Lock = true
+		c.Lock()
 
 		lastBlock := c.GetBlock(blockHeight)
 
@@ -245,16 +315,17 @@ func (c *Chain) ProduceBlock() error {
 
 		blockTime := time.Now().UnixMilli()
 
+		// take the first 10 transactions
 		for i := uint64(0); i < pendingTx; i++ {
 			pSignedTx := c.Mempool.Get(i)
 
-			txInHex, err := hex.DecodeString(pSignedTx.Transaction)
+			txInBytes, err := hex.DecodeString(pSignedTx.Transaction)
 			if err != nil {
 				panic(err)
 			}
 
 			txUnpacked := new(types.Transaction)
-			borsh.Deserialize(*txUnpacked, txInHex)
+			borsh.Deserialize(txUnpacked, txInBytes)
 
 			q := fmt.Sprintf(`
 				INSERT INTO transactions (id, block_id, signer, receiver, actions, created_at)
@@ -355,7 +426,7 @@ func (c *Chain) ProduceBlock() error {
 			return nil
 		})
 
-		c.Lock = false
+		c.Unlock()
 	}
 
 	return nil
