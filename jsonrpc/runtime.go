@@ -52,7 +52,7 @@ func (s *RuntimeServer) Mutate(r *http.Request, params *string, reply *types.Rpc
 	return nil
 }
 
-func (s *RuntimeServer) Query(r *http.Request, params *string, reply *types.RpcReply) error {
+func (s *RuntimeServer) Query(r *http.Request, params *types.RuntimeServerQuery, reply *types.ServerQueryReply) error {
 	log.Printf("Running Query Function")
 
 	blockHeight := s.Chain.GetBlockHeight()
@@ -64,10 +64,10 @@ func (s *RuntimeServer) Query(r *http.Request, params *string, reply *types.RpcR
 		panic(err)
 	}
 
-	*reply = types.RpcReply{
+	*reply = types.ServerQueryReply{
 		BlockHash:   blockHash,
 		BlockHeight: blockHeight,
-		Result:      result,
+		Result:      string(result[:]),
 	}
 
 	return nil
