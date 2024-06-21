@@ -23,7 +23,7 @@ func (s *CommonServer) Query(r *http.Request, params *string, reply *types.RpcRe
 	queryParams := new(types.CommonServerQuery)
 	borsh.Deserialize(queryParams, decodedParams)
 
-	if queryParams.Method == "get_nonce" {
+	if queryParams.FunctionName == "get_nonce" {
 		pubKey := queryParams.Args[0]
 		nonce := s.Chain.GetNonce(pubKey)
 
