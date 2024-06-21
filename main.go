@@ -2,6 +2,7 @@ package main
 
 import (
 	"eastnode/chain"
+	"eastnode/jsonrpc"
 	"log"
 	"net/http"
 
@@ -20,11 +21,15 @@ func main() {
 	rpcServer.RegisterCodec(json.NewCodec(), "application/json")
 	rpcServer.RegisterCodec(json.NewCodec(), "application/json;charset=UTF-8")
 
-	runtimeServer := &chain.Jsonrpc{
+	runtimeServer := &jsonrpc.RuntimeServer{
+		Chain: bc,
+	}
+	commonServer := &jsonrpc.CommonServer{
 		Chain: bc,
 	}
 
-	rpcServer.RegisterService(runtimeServer, "runtime")
+	rpcServer.RegisterService(runtimeServer, "Runtime")
+	rpcServer.RegisterService(commonServer, "Common")
 
 	router := mux.NewRouter()
 	router.Handle("/", rpcServer)

@@ -4,6 +4,7 @@ import (
 	"eastnode/types"
 	"eastnode/utils"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -106,6 +107,62 @@ func (c *Chain) GetBlock(blockHeight uint64) types.Block {
 	})
 
 	return *block
+}
+
+func (c *Chain) GetNonce(pubKey string) uint64 {
+	nonce := uint64(0)
+
+	err := c.Store.KV.View(func(tx *bolt.Tx) error {
+		bNonce := tx.Bucket([]byte("nonce"))
+		lastNonce := bNonce.Get([]byte(pubKey))
+
+		if lastNonce != nil {
+			nonce = utils.Btoi(lastNonce)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	return nonce
+}
+
+func (c *Chain) CheckTx(signedTx types.SignedTransaction) error {
+	// check signature valid
+	verified := signedTx.IsValid()
+
+	// unpack signedTx
+	inputTx := signedTx.Unpack()
+
+	err := c.Store.KV.View(func(tx *bolt.Tx) error {
+		bNonce := tx.Bucket([]byte("nonce"))
+		lastNonce := bNonce.Get([]byte(inputTx.Signer))
+
+		// if lastNonce not exist, this is the first transaction
+		if lastNonce == nil {
+			return nil
+		}
+
+		// if lastNonce exist, check if current nonce larger than last nonce
+		if inputTx.Nonce > utils.Btoi(lastNonce) {
+			return nil
+		}
+
+		return errors.New("invalid nonce")
+	})
+
+	if verified && err == nil {
+		return nil
+	}
+
+	if !verified {
+		return errors.New("invalid signature")
+	}
+
+	return err
 }
 
 func (c *Chain) ProduceBlock() error {

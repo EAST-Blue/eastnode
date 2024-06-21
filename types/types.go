@@ -32,6 +32,22 @@ type SignedTransaction struct {
 	Transaction string `json:"transaction"`
 }
 
+func (st *SignedTransaction) Unpack() Transaction {
+	txUnpacked := new(Transaction)
+
+	txBytes, err := hex.DecodeString(st.Transaction)
+	if err != nil {
+		panic(err)
+	}
+
+	err = borsh.Deserialize(txUnpacked, txBytes)
+	if err != nil {
+		panic(err)
+	}
+
+	return *txUnpacked
+}
+
 func (st *SignedTransaction) IsValid() bool {
 	txUnpacked := new(Transaction)
 
@@ -68,6 +84,7 @@ func (st *SignedTransaction) IsValid() bool {
 
 // Signer str, Receiver str, Actions hex
 type Transaction struct {
+	Nonce    uint64 `json:"nonce"`
 	Signer   string `json:"signer"`
 	Receiver string `json:"receiver"`
 	Actions  string `json:"actions"`
@@ -80,6 +97,11 @@ type Transaction struct {
 // func (t *Transaction) deserialize() []byte {
 
 // }
+
+type CommonServerQuery struct {
+	Method string   `json:"method"`
+	Args   []string `json:"args"`
+}
 
 type MerkleTreeContent struct {
 	Value string

@@ -4,7 +4,6 @@ import (
 	"eastnode/types"
 	"eastnode/utils"
 	"encoding/json"
-	"log"
 
 	bolt "go.etcd.io/bbolt"
 )
@@ -28,6 +27,12 @@ func (q *Mempool) Init(db *bolt.DB) error {
 			return err
 		}
 
+		_, err = tx.CreateBucketIfNotExists([]byte("nonce"))
+
+		if err != nil {
+			return err
+		}
+
 		bMempoolMeta := tx.Bucket([]byte("mempool-meta"))
 
 		head := bMempoolMeta.Get([]byte("head"))
@@ -45,25 +50,29 @@ func (q *Mempool) Init(db *bolt.DB) error {
 	return nil
 }
 
-func (q *Mempool) Enqueue(inputTx types.SignedTransaction) {
+func (q *Mempool) Enqueue(signedTx types.SignedTransaction) {
+	// unpack signedTx
+	inputTx := signedTx.Unpack()
+
 	err := q.db.Update(func(tx *bolt.Tx) error {
 		bMempool := tx.Bucket([]byte("mempool"))
+		bNonce := tx.Bucket([]byte("nonce"))
 
 		index, err := bMempool.NextSequence()
 
 		if err != nil {
-			log.Println(err)
 			return err
 		}
 
-		inputTxBuf, err := json.Marshal(inputTx)
+		signedTxBuf, err := json.Marshal(signedTx)
 		head := index - 1
 
 		if err != nil {
 			return err
 		}
 
-		bMempool.Put([]byte(utils.Itob(head)), inputTxBuf)
+		bMempool.Put([]byte(utils.Itob(head)), signedTxBuf)
+		bNonce.Put([]byte(inputTx.Signer), utils.Itob(inputTx.Nonce))
 
 		return nil
 	})
