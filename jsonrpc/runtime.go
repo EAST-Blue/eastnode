@@ -1,6 +1,7 @@
-package chain
+package jsonrpc
 
 import (
+	"eastnode/chain"
 	"eastnode/types"
 	"eastnode/utils"
 	"encoding/json"
@@ -8,11 +9,11 @@ import (
 	"net/http"
 )
 
-type Jsonrpc struct {
-	Chain *Chain
+type RuntimeServer struct {
+	Chain *chain.Chain
 }
 
-func (s *Jsonrpc) Mutate(r *http.Request, params *string, reply *types.RpcReply) error {
+func (s *RuntimeServer) Mutate(r *http.Request, params *string, reply *types.RpcReply) error {
 	log.Printf("Running Call Function")
 
 	blockHeight := s.Chain.GetBlockHeight()
@@ -21,9 +22,9 @@ func (s *Jsonrpc) Mutate(r *http.Request, params *string, reply *types.RpcReply)
 	newSignedTx := new(types.SignedTransaction)
 	utils.DecodeHexAndBorshDeserialize(newSignedTx, *params)
 
-	txIsValid := newSignedTx.IsValid()
+	err := s.Chain.CheckTx(*newSignedTx)
 
-	if txIsValid {
+	if err == nil {
 		// add to mempool, signal to produce new block
 		log.Println("adding to mempool")
 
@@ -40,14 +41,14 @@ func (s *Jsonrpc) Mutate(r *http.Request, params *string, reply *types.RpcReply)
 		*reply = types.RpcReply{
 			BlockHash:   blockHash,
 			BlockHeight: blockHeight,
-			Result:      []byte("false"),
+			Result:      []byte(err.Error()),
 		}
 	}
 
 	return nil
 }
 
-func (s *Jsonrpc) Query(r *http.Request, params *string, reply *types.RpcReply) error {
+func (s *RuntimeServer) Query(r *http.Request, params *string, reply *types.RpcReply) error {
 	log.Printf("Running Query Function")
 
 	blockHeight := s.Chain.GetBlockHeight()
