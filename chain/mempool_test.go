@@ -2,11 +2,13 @@ package chain
 
 import (
 	"eastnode/types"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 	"testing"
 
+	"github.com/near/borsh-go"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -43,7 +45,15 @@ func TestMempool(t *testing.T) {
 	length := 15
 
 	for i := 0; i < length; i++ {
-		signedTx := types.SignedTransaction{ID: fmt.Sprint(i), Signature: "signature", Transaction: "transaction"}
+		tx := types.Transaction{}
+
+		serializedActions, err := borsh.Serialize(tx)
+		if err != nil {
+			t.Error(err)
+		}
+		serializedTx := hex.EncodeToString(serializedActions)
+
+		signedTx := types.SignedTransaction{ID: fmt.Sprint(i), Signature: "signature", Transaction: serializedTx}
 		mempool.Enqueue(signedTx)
 
 	}
