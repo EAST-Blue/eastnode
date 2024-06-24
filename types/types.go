@@ -8,7 +8,6 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cbergoon/merkletree"
 	"github.com/dustinxie/ecc"
-	"github.com/near/borsh-go"
 )
 
 // Kind: ["call", "view", "deploy", "genesis"]
@@ -19,6 +18,13 @@ type Action struct {
 	FunctionName string   `json:"function_name"`
 	Args         []string `json:"args"`
 }
+
+type ActionKind int
+
+const (
+	Call ActionKind = 0
+	View ActionKind = 1
+)
 
 type RpcReply struct {
 	BlockHash   string `json:"block_hash"`
@@ -36,23 +42,13 @@ type SignedTransaction struct {
 func (st *SignedTransaction) Unpack() Transaction {
 	txUnpacked := new(Transaction)
 
-	txBytes, err := hex.DecodeString(st.Transaction)
-	if err != nil {
-		panic(err)
-	}
-
-	err = borsh.Deserialize(txUnpacked, txBytes)
-	if err != nil {
-		panic(err)
-	}
+	utils.DecodeHexAndBorshDeserialize(txUnpacked, st.Transaction)
 
 	return *txUnpacked
 }
 
 func (st *SignedTransaction) IsValid() bool {
-	txUnpacked := new(Transaction)
-
-	txBytes := utils.DecodeHexAndBorshDeserialize(txUnpacked, st.Transaction)
+	txUnpacked := st.Unpack()
 
 	pubKeyBytes, err := hex.DecodeString(txUnpacked.Signer)
 	if err != nil {
@@ -69,14 +65,11 @@ func (st *SignedTransaction) IsValid() bool {
 		panic(err)
 	}
 
+	txBytes, _ := hex.DecodeString(st.Transaction)
 	hashedMsg := sha256.Sum256(txBytes)
 	verified := ecc.VerifyBytes(pubKey.ToECDSA(), hashedMsg[:], sigBytes, ecc.Normal)
 
 	return verified
-}
-
-func DecodeHexAndBorshDeserialize(txUnpacked *Transaction, s string) {
-	panic("unimplemented")
 }
 
 // Signer str, Receiver str, Actions hex

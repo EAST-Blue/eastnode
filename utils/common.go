@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	"log"
 	"os"
 
@@ -57,8 +56,6 @@ func DecodeHexAndBorshDeserialize(target interface{}, s string) []byte {
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Println("decoded hex", bytes)
 
 	err = borsh.Deserialize(target, bytes)
 	if err != nil {

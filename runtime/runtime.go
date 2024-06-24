@@ -3,6 +3,7 @@ package runtime
 import (
 	"bytes"
 	"context"
+	"eastnode/types"
 	store "eastnode/utils/store"
 	"encoding/binary"
 	"fmt"
@@ -78,14 +79,14 @@ func (r *WasmRuntime) writeString(memory api.Memory, str string) uint32 {
 	return uint32(stringOffset)
 }
 
-func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndexAddress string, caller Address, kind string) api.Module {
+func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndexAddress string, signer Address, kind types.ActionKind) api.Module {
 	wazeroRuntime := wazero.NewRuntime(ctx)
 
 	envBuilder := wazeroRuntime.
 		NewHostModuleBuilder("env").
 		NewFunctionBuilder().
 		WithFunc(func(tableName int32, primaryKey int32, tableSchema int32) int32 {
-			if kind != "call" {
+			if kind != types.Call {
 				log.Panicln("Cannot call function on view")
 				return 0
 			}
@@ -103,7 +104,7 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		Export("createTable").
 		NewFunctionBuilder().
 		WithFunc(func(tableName int32, values int32) int32 {
-			if kind != "call" {
+			if kind != types.Call {
 				log.Panicln("Cannot call function on view")
 				return 0
 			}
@@ -120,7 +121,7 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		Export("insertItem").
 		NewFunctionBuilder().
 		WithFunc(func(tableName int32, whereCondition int32, values int32) int32 {
-			if kind != "call" {
+			if kind != types.Call {
 				log.Panicln("Cannot call function on view")
 				return 0
 			}
@@ -138,7 +139,7 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		Export("updateItem").
 		NewFunctionBuilder().
 		WithFunc(func(tableName int32, whereCondition int32) int32 {
-			if kind != "call" {
+			if kind != types.Call {
 				log.Panicln("Cannot call function on view")
 				return 0
 			}
@@ -155,6 +156,10 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		Export("deleteItem").
 		NewFunctionBuilder().
 		WithFunc(func(tableName int32, whereCondition int32) uint32 {
+			if kind != types.Call {
+				log.Panicln("Cannot call function on view")
+				return 0
+			}
 			tableNameStr := ToString(r.Mod.Memory(), int64(tableName))
 			whereConditionStr := ToString(r.Mod.Memory(), int64(whereCondition))
 
@@ -168,6 +173,7 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		Export("selectItem").
 		NewFunctionBuilder().
 		WithFunc(func(strPtr int32) {
+			// DEBUG
 			str := ToString(r.Mod.Memory(), int64(strPtr))
 
 			fmt.Println("consoleLog", str)
@@ -195,14 +201,14 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 	return mod
 }
 
-func (r *WasmRuntime) RunWasmFunction(caller Address, wasmBytes []byte, smartIndexAddress string, functionName string, args []uint64, kind string) any {
+func (r *WasmRuntime) RunWasmFunction(signer Address, wasmBytes []byte, smartIndexAddress string, functionName string, args []uint64, kind types.ActionKind) any {
 	ctx := context.Background()
 	defer ctx.Done()
 
-	mod := r.loadWasm(wasmBytes, ctx, smartIndexAddress, caller, kind)
+	mod := r.loadWasm(wasmBytes, ctx, smartIndexAddress, signer, kind)
 	f := mod.ExportedFunction(functionName)
 
-	// TODO: handle string input
+	// TODO: handle string input and result
 	result, err := f.Call(ctx, args...)
 
 	if err != nil {

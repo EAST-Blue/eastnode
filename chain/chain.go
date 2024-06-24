@@ -326,8 +326,7 @@ func (c *Chain) ProduceBlock() error {
 		for i := uint64(0); i < pendingTx; i++ {
 			pSignedTx := c.Mempool.Get(i) // ensure pushback
 
-			txUnpacked := new(types.Transaction)
-			utils.DecodeHexAndBorshDeserialize(*txUnpacked, pSignedTx.Transaction)
+			txUnpacked := pSignedTx.Unpack()
 
 			q := fmt.Sprintf(`
 				INSERT INTO transactions (id, block_id, signer, receiver, actions, created_at)
@@ -338,13 +337,12 @@ func (c *Chain) ProduceBlock() error {
 			// Process actions
 
 			parsedActions := new([]types.Action)
-			utils.DecodeHexAndBorshDeserialize(parsedActions, txUnpacked.Actions)
 
 			for _, action := range *parsedActions {
 				if action.Kind == "deploy" || action.Kind == "redeploy" {
-					c.ProcessDeploy(*txUnpacked, action)
+					c.ProcessDeploy(txUnpacked, action)
 				} else if action.Kind == "call" {
-					c.ProcessCall(*txUnpacked, action)
+					c.ProcessCall(txUnpacked, action)
 				} else if action.Kind == "view" {
 					// TODO: handle view function in the front, before going into produce block, so there'll be no view function here
 				}
@@ -450,11 +448,7 @@ func (c *Chain) ProduceBlock() error {
 	return nil
 }
 
-func (c *Chain) ProcessCall(tx types.Transaction, action types.Action) {
-	smartIndexAddress := tx.Receiver
-	functionName := action.FunctionName
-
-	args := action.Args
+func (c *Chain) ProcessWasmCall(signer string, smartIndexAddress string, functionName string, args []string, kind types.ActionKind) any {
 
 	argsInt64 := make([]uint64, len(args))
 
@@ -471,7 +465,11 @@ func (c *Chain) ProcessCall(tx types.Transaction, action types.Action) {
 	sr := c.Store.Instance.QueryRow(fmt.Sprintf("SELECT wasm_blob FROM smart_index WHERE smart_index_address = '%s';", smartIndexAddress))
 	sr.Scan(&resultWasmBlob)
 
-	c.WasmRuntime.RunWasmFunction(runtime.Address(tx.Signer), resultWasmBlob, smartIndexAddress, functionName, argsInt64, action.Kind)
+	return c.WasmRuntime.RunWasmFunction(runtime.Address(signer), resultWasmBlob, smartIndexAddress, functionName, argsInt64, types.Call)
+}
+
+func (c *Chain) ProcessCall(tx types.Transaction, action types.Action) {
+	c.ProcessWasmCall(tx.Signer, tx.Receiver, action.FunctionName, action.Args, types.Call)
 }
 
 func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string {
