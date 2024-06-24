@@ -95,9 +95,21 @@ type Transaction struct {
 
 // }
 
+type RuntimeServerQuery struct {
+	Target       string   `json:"target"`
+	FunctionName string   `json:"function_name"`
+	Args         []string `json:"args"`
+}
+
 type CommonServerQuery struct {
-	Method string   `json:"method"`
-	Args   []string `json:"args"`
+	FunctionName string   `json:"function_name"`
+	Args         []string `json:"args"`
+}
+
+type ServerQueryReply struct {
+	BlockHash   string `json:"block_hash"`
+	BlockHeight uint64 `json:"block_height"`
+	Result      string `json:"result"`
 }
 
 type MerkleTreeContent struct {
