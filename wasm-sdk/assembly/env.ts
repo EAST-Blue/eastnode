@@ -61,3 +61,24 @@ export declare function getBlockByHeight(height: u64): i32;
 
 @external("env", "getTransactionsByBlockHash")
 export declare function getTransactionsByBlockHash(block_hash: string): i32;
+
+
+// [{
+//     "id": 1,
+//     "value": 5000000000,
+//     "spending_tx_id": 0,
+//     "spending_tx_hash": ""
+//     "spending_tx_index": 0,
+//     "sequence": 0,
+//     "funding_tx_id": 194,
+//     "funding_tx_hash": "3a6d490a7cf40819cdd826729d921ad5ab4b8347dfbec81179dd09aba0d25b37",
+//     "funding_tx_index": 0,
+//     "signature_script": "",
+//     "pk_script": "410449fff9665bfda43017a27b3d32e986378befdd6fa5d4eb097626701ace807a2b3a43e74375dce4ed9028b3b62ba8485358cd48967e854a857a38ecdbfe5b62f8ac",
+//     "witness": "",
+//     "spender": "",
+//     "type": "nonstandard",
+// }]
+
+@external("env", "getOutpointsByTransactionHash")
+export declare function getOutpointsByTransactionHash(tx_hash: string): i32;

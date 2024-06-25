@@ -217,6 +217,34 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("getTransactionsByBlockHash").
 		NewFunctionBuilder().
+		WithFunc(func(tx_hash int32) uint32 {
+			// ^ the tx_hash above is ptr for string
+			// TODO: Remove mocked data
+			result := []types.BitcoinOutpoint{{
+				ID:              1,
+				Value:           5000000000,
+				SpendingTxId:    0,
+				SpendingTxHash:  "",
+				SpendingTxIndex: 0,
+				Sequence:        0,
+				FundingTxId:     194,
+				FundingTxHash:   "3a6d490a7cf40819cdd826729d921ad5ab4b8347dfbec81179dd09aba0d25b37",
+				FundingTxIndex:  0,
+				SignatureScript: "",
+				PkScript:        "410449fff9665bfda43017a27b3d32e986378befdd6fa5d4eb097626701ace807a2b3a43e74375dce4ed9028b3b62ba8485358cd48967e854a857a38ecdbfe5b62f8ac",
+				Witness:         "",
+				Spender:         "",
+				Type:            "nonstandard",
+			}}
+
+			serializedResult, _ := json.Marshal(result)
+
+			ptr := r.writeString(r.Mod.Memory(), string(serializedResult))
+
+			return uint32(ptr)
+		}).
+		Export("getOutpointsByTransactionHash").
+		NewFunctionBuilder().
 		WithFunc(func(strPtr int32) {
 			// DEBUG
 			str := ToString(r.Mod.Memory(), int64(strPtr))

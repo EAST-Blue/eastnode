@@ -9,6 +9,7 @@ import {
   consoleLog,
   getBlockByHeight,
   getTransactionsByBlockHash,
+  getOutpointsByTransactionHash,
 } from "./env";
 import { toString } from "./utils";
 import { JSON } from "assemblyscript-json/assembly";
@@ -73,6 +74,7 @@ export function selectItemTest(): void {
 }
 
 export function index(block_height: u64): void {
+  // Get Block
   const ptr = getBlockByHeight(block_height);
   const result = toString(ptr);
 
@@ -87,25 +89,60 @@ export function index(block_height: u64): void {
   getResultFromJson(jsonResult, "nonce", "int64");
   getResultFromJson(jsonResult, "bits", "int64");
 
+  // Get Txs
   const hash = getResultFromJson(jsonResult, "hash", "string");
-
   const txHashesPtr = getTransactionsByBlockHash(hash);
   const resultTxHashes = toString(txHashesPtr);
   const jsonResultTxHashes = toJsonArray(resultTxHashes);
 
+  const txHashes: string[] = []
   for (let i = 0; i < jsonResultTxHashes.valueOf().length; i++) {
     const jsonObj = jsonResultTxHashes.valueOf()[i];
 
     if (jsonObj.isObj) {
       getResultFromJson(jsonObj as JSON.Obj, "id", "int64");
       getResultFromJson(jsonObj as JSON.Obj, "hash", "string");
-      getResultFromJson(jsonObj as JSON.Obj, "block_hash", "string");
       getResultFromJson(jsonObj as JSON.Obj, "block_id", "int64");
       getResultFromJson(jsonObj as JSON.Obj, "lock_time", "int64");
       getResultFromJson(jsonObj as JSON.Obj, "version", "int64");
       getResultFromJson(jsonObj as JSON.Obj, "safe", "int64");
+      const txHash = getResultFromJson(jsonObj as JSON.Obj, "block_hash", "string");
+      txHashes.push(txHash)
     }
   }
+
+  // Get UTXOs
+
+  for (let i = 0; i < txHashes.length; i++) {
+      const utxosPtr = getOutpointsByTransactionHash(txHashes[i])
+      const utxosStr = toString(utxosPtr);
+      const jsonResultUtxos = toJsonArray(utxosStr);
+
+      for (let i = 0; i < jsonResultUtxos.valueOf().length; i++) {
+        const jsonObj = jsonResultUtxos.valueOf()[i];
+    
+        if (jsonObj.isObj) {
+          getResultFromJson(jsonObj as JSON.Obj, "id", "int64");
+          getResultFromJson(jsonObj as JSON.Obj, "value", "int64");
+          getResultFromJson(jsonObj as JSON.Obj, "spending_tx_id", "string");
+          getResultFromJson(jsonObj as JSON.Obj, "spending_tx_hash", "string");
+          getResultFromJson(jsonObj as JSON.Obj, "spending_tx_index", "string");
+          getResultFromJson(jsonObj as JSON.Obj, "sequence", "int64");
+          getResultFromJson(jsonObj as JSON.Obj, "funding_tx_id", "string");
+          getResultFromJson(jsonObj as JSON.Obj, "funding_tx_hash", "string");
+          getResultFromJson(jsonObj as JSON.Obj, "funding_tx_index", "string");
+          getResultFromJson(jsonObj as JSON.Obj, "signature_script", "string");
+          getResultFromJson(jsonObj as JSON.Obj, "pk_script", "string");
+          getResultFromJson(jsonObj as JSON.Obj, "witness", "string");
+          getResultFromJson(jsonObj as JSON.Obj, "spender", "string");
+          getResultFromJson(jsonObj as JSON.Obj, "type", "string");
+        }
+      }
+
+
+
+  }
+
 }
 
 function getResultFromJson(

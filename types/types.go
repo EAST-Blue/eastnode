@@ -160,3 +160,20 @@ type BitcoinTransaction struct {
 	Version   int64  `json:"version"`
 	Safe      int64  `json:"safe"`
 }
+
+type BitcoinOutpoint struct {
+	ID              int64  `json:"id"`
+	Value           int64  `json:"value"`
+	SpendingTxId    int64  `json:"spending_tx_id"`
+	SpendingTxHash  string `json:"spending_tx_hash"`
+	SpendingTxIndex int64  `json:"spending_tx_index"`
+	Sequence        int64  `json:"sequence"`
+	FundingTxId     int64  `json:"funding_tx_id"`
+	FundingTxHash   string `json:"funding_tx_hash"`
+	FundingTxIndex  int64  `json:"funding_tx_index"`
+	SignatureScript string `json:"signature_script"`
+	PkScript        string `json:"pk_script"`
+	Witness         string `json:"witness"`
+	Spender         string `json:"spender"`
+	Type            string `json:"type"`
+}
