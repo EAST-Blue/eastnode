@@ -1,6 +1,12 @@
 @external("env", "consoleLog")
 export declare function consoleLog(str: string): void;
 
+@external("env", "valueReturn")
+export declare function valueReturn(str: string): void;
+
+@external("env", "panic")
+export declare function panic(str: string): void;
+
 // Host function to DB
 // CreateTable
 // Insert

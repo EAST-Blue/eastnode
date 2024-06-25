@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"strconv"
 	"time"
 
 	"github.com/btcsuite/btcd/btcutil/bech32"
@@ -450,22 +449,11 @@ func (c *Chain) ProduceBlock() error {
 
 func (c *Chain) ProcessWasmCall(signer string, smartIndexAddress string, functionName string, args []string, kind types.ActionKind) any {
 
-	argsInt64 := make([]uint64, len(args))
-
-	for i := range argsInt64 {
-		convertedInt, err := strconv.Atoi(args[i])
-
-		if err != nil {
-			log.Panicln(err)
-		}
-		argsInt64[i] = uint64(convertedInt)
-	}
-
 	var resultWasmBlob []byte
 	sr := c.Store.Instance.QueryRow(fmt.Sprintf("SELECT wasm_blob FROM smart_index WHERE smart_index_address = '%s';", smartIndexAddress))
 	sr.Scan(&resultWasmBlob)
 
-	return c.WasmRuntime.RunWasmFunction(runtime.Address(signer), resultWasmBlob, smartIndexAddress, functionName, argsInt64, types.Call)
+	return c.WasmRuntime.RunWasmFunction(runtime.Address(signer), resultWasmBlob, smartIndexAddress, functionName, args, types.Call)
 }
 
 func (c *Chain) ProcessCall(tx types.Transaction, action types.Action) {

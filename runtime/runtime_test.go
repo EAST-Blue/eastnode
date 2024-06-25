@@ -12,5 +12,16 @@ func TestGetBlockByHeight(t *testing.T) {
 
 	wr := &WasmRuntime{Store: *utils.GetFakeInstance(utils.SmartIndexDB)}
 
-	wr.RunWasmFunction("", wasmBytes, "", "index", []uint64{1}, types.Call)
+	wr.RunWasmFunction("", wasmBytes, "", "index", []string{"1"}, types.Call)
+}
+
+func TestStringParamsAndResult(t *testing.T) {
+	wasmBytes, _ := os.ReadFile("../build/release.wasm")
+
+	wr := &WasmRuntime{Store: *utils.GetFakeInstance(utils.SmartIndexDB)}
+
+	output := wr.RunWasmFunction("", wasmBytes, "", "processString", []string{"INPUT"}, types.Call)
+	if output != "output for INPUT" {
+		t.Error("output is incorrect")
+	}
 }

@@ -80,7 +80,7 @@ func (r *WasmRuntime) writeString(memory api.Memory, str string) uint32 {
 	return uint32(stringOffset)
 }
 
-func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndexAddress string, signer Address, kind types.ActionKind) api.Module {
+func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndexAddress string, signer Address, kind types.ActionKind, output *string) api.Module {
 	wazeroRuntime := wazero.NewRuntime(ctx)
 
 	envBuilder := wazeroRuntime.
@@ -249,6 +249,22 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 			// DEBUG
 			str := ToString(r.Mod.Memory(), int64(strPtr))
 
+			*output = str
+		}).
+		Export("valueReturn").
+		NewFunctionBuilder().
+		WithFunc(func(strPtr int32) {
+			// DEBUG
+			str := ToString(r.Mod.Memory(), int64(strPtr))
+
+			log.Panicln(str)
+		}).
+		Export("panic").
+		NewFunctionBuilder().
+		WithFunc(func(strPtr int32) {
+			// DEBUG
+			str := ToString(r.Mod.Memory(), int64(strPtr))
+
 			fmt.Println("consoleLog", str)
 		}).
 		Export("consoleLog")
@@ -274,19 +290,26 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 	return mod
 }
 
-func (r *WasmRuntime) RunWasmFunction(signer Address, wasmBytes []byte, smartIndexAddress string, functionName string, args []uint64, kind types.ActionKind) any {
+func (r *WasmRuntime) RunWasmFunction(signer Address, wasmBytes []byte, smartIndexAddress string, functionName string, args []string, kind types.ActionKind) any {
 	ctx := context.Background()
 	defer ctx.Done()
 
-	mod := r.loadWasm(wasmBytes, ctx, smartIndexAddress, signer, kind)
+	var output string
+	mod := r.loadWasm(wasmBytes, ctx, smartIndexAddress, signer, kind, &output)
 	f := mod.ExportedFunction(functionName)
 
-	// TODO: handle string input and result
-	result, err := f.Call(ctx, args...)
+	// All arguments are stringified pointers
+	argsPtr := make([]uint64, len(args))
+	for i := range argsPtr {
+		ptr := r.writeString(r.Mod.Memory(), args[i])
+		argsPtr[i] = uint64(ptr)
+	}
+
+	_, err := f.Call(ctx, argsPtr...)
 
 	if err != nil {
 		log.Panicln(err)
 	}
 
-	return result
+	return output
 }
