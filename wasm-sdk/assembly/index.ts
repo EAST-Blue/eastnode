@@ -7,6 +7,7 @@ import {
   updateItem,
   selectItems,
   consoleLog,
+  getBlockByHeight,
 } from "./env";
 import { toString } from "./utils";
 import { JSON } from "assemblyscript-json/assembly";
@@ -26,7 +27,7 @@ export function init(): void {
 
 export function getOrdinal(id: string): string {
   const whereCondition = toSchema([new Column("id", id)]);
-  const ptr = selectItems(ORDINALS_TABLE_NAME, whereCondition)
+  const ptr = selectItems(ORDINALS_TABLE_NAME, whereCondition);
   const result = toString(ptr);
 
   return result;
@@ -65,23 +66,41 @@ export function selectItemTest(): void {
 
   const jsonResult = toJson(result);
 
-  let idOrNull: JSON.Str | null = jsonResult.getString("id"); 
-  if (idOrNull != null) {
-    let id: string = idOrNull.valueOf();
-    consoleLog("id " + id)
-  }
-  let addressOrNull: JSON.Str | null = jsonResult.getString("address"); 
-  if (addressOrNull != null) {
-    let address: string = addressOrNull.valueOf();
-    consoleLog("address " + address)
-  }
-  let valueOrNull: JSON.Str | null = jsonResult.getString("value"); 
-  if (valueOrNull != null) {
-    let value: string = valueOrNull.valueOf();
-    consoleLog("value " + value)
-  }
+  getResultFromJson(jsonResult, "id", "string")
+  getResultFromJson(jsonResult, "address", "string")
+  getResultFromJson(jsonResult, "value", "string")
 }
 
-export function index(params: string[]): void {
-  const a = u128.fromString(params[0]);
+export function index(block_height: u64): void {
+  const ptr = getBlockByHeight(block_height);
+  const result = toString(ptr);
+
+  const jsonResult = toJson(result);
+
+  getResultFromJson(jsonResult, "id", "int64")
+  getResultFromJson(jsonResult, "version", "int64")
+  getResultFromJson(jsonResult, "height", "string")
+  getResultFromJson(jsonResult, "previous_block", "string")
+  getResultFromJson(jsonResult, "merkle_root", "string")
+  getResultFromJson(jsonResult, "hash", "string")
+  getResultFromJson(jsonResult, "time", "int64")
+  getResultFromJson(jsonResult, "nonce", "int64")
+  getResultFromJson(jsonResult, "bits", "int64")
+
+}
+
+function getResultFromJson(jsonObj: JSON.Obj, fieldName: string, type: string): void {
+  if (type === "int64") {
+    let valueOrNull: JSON.Integer | null = jsonObj.getInteger(fieldName);
+    if (valueOrNull != null) {
+      let value: i64 = valueOrNull.valueOf();
+      consoleLog(fieldName + ": " + value.toString());
+    }
+  } else {
+    let valueOrNull: JSON.Str | null = jsonObj.getString(fieldName);
+    if (valueOrNull != null) {
+      let value: string = valueOrNull.valueOf();
+      consoleLog(fieldName + ": " + value);
+    }
+  }
 }

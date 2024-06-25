@@ -84,7 +84,6 @@ func TestProcessDeploy(t *testing.T) {
 	}
 
 	smartIndexAddress := bc.ProcessDeploy(transaction, actions[0])
-	fmt.Println(smartIndexAddress)
 
 	var resultSmartIndexAddress string
 	var resultOwnerAddress string
@@ -93,8 +92,6 @@ func TestProcessDeploy(t *testing.T) {
 	sr := bc.Store.Instance.QueryRow(fmt.Sprintf("SELECT smart_index_address, owner_address, wasm_blob FROM smart_index WHERE smart_index_address = '%s';", smartIndexAddress))
 
 	sr.Scan(&resultSmartIndexAddress, &resultOwnerAddress, &resultWasmBlob)
-
-	fmt.Println("smartIndexRow", resultSmartIndexAddress, resultOwnerAddress)
 
 	SmartIndexAddress = smartIndexAddress
 

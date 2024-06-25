@@ -136,3 +136,17 @@ type Block struct {
 	Data   []byte
 }
 type BlockHash []byte
+
+// WasmRuntime
+
+type BitcoinBlockHeader struct {
+	ID            int64  `json:"id"`
+	Version       int64  `json:"version"`
+	Height        int64  `json:"height"`
+	PreviousBlock string `json:"previous_block"`
+	MerkleRoot    string `json:"merkle_root"`
+	Hash          string `json:"hash"`
+	Time          int64  `json:"time"`
+	Nonce         int64  `json:"nonce"`
+	Bits          int64  `json:"bits"`
+}

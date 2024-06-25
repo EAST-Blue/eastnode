@@ -6,6 +6,7 @@ import (
 	"eastnode/types"
 	store "eastnode/utils/store"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -171,6 +172,28 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 			return uint32(ptr)
 		}).
 		Export("selectItem").
+		NewFunctionBuilder().
+		WithFunc(func(height int64) uint32 {
+			// TODO: Remove mocked data
+			result := types.BitcoinBlockHeader{
+				ID:            1,
+				Version:       1,
+				Height:        0,
+				PreviousBlock: "0000000000000000000000000000000000000000000000000000000000000000",
+				MerkleRoot:    "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b",
+				Hash:          "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+				Time:          1231006505000,
+				Nonce:         2083236893,
+				Bits:          486604799,
+			}
+
+			serializedResult, _ := json.Marshal(result)
+
+			ptr := r.writeString(r.Mod.Memory(), string(serializedResult))
+
+			return uint32(ptr)
+		}).
+		Export("getBlockByHeight").
 		NewFunctionBuilder().
 		WithFunc(func(strPtr int32) {
 			// DEBUG
