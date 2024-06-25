@@ -150,3 +150,13 @@ type BitcoinBlockHeader struct {
 	Nonce         int64  `json:"nonce"`
 	Bits          int64  `json:"bits"`
 }
+
+type BitcoinTransaction struct {
+	ID        int64  `json:"id"`
+	Hash      string `json:"hash"`
+	BlockHash string `json:"block_hash"`
+	BlockId   int64  `json:"block_id"`
+	LockTime  int64  `json:"lock_time"`
+	Version   int64  `json:"version"`
+	Safe      int64  `json:"safe"`
+}

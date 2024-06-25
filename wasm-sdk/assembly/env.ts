@@ -48,4 +48,16 @@ export declare function selectItems(tableName: string, whereCondition: string): 
 
 @external("env", "getBlockByHeight")
 export declare function getBlockByHeight(height: u64): i32;
-// export declare function getTransaction(id: u64): ArrayBuffer;
+
+// [{
+//     "id": 1,
+//     "hash": "3a6d490a7cf40819cdd826729d921ad5ab4b8347dfbec81179dd09aba0d25b37",
+//     "block_hash": "000000009a940db389f3a7cbb8405f4ec14342bed36073b60ee63ed7e117f193",
+//     "block_id": 189,
+//     "lock_time": 0,
+//     "version": 1,
+//     "safe": 0
+// }]
+
+@external("env", "getTransactionsByBlockHash")
+export declare function getTransactionsByBlockHash(block_hash: string): i32;

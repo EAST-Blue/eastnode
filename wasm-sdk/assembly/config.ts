@@ -25,3 +25,9 @@ export function toJson(jsonString: string): JSON.Obj {
 
   return jsonObj;
 }
+
+export function toJsonArray(jsonString: string): JSON.Arr {
+  let jsonObj: JSON.Arr = <JSON.Arr>JSON.parse(jsonString);
+
+  return jsonObj;
+}

@@ -1,5 +1,5 @@
 import { u128 } from "as-bignum/assembly";
-import { Column, toJson, toSchema } from "./config";
+import { Column, toJson, toJsonArray, toSchema } from "./config";
 import {
   createTable,
   deleteItem,
@@ -8,6 +8,7 @@ import {
   selectItems,
   consoleLog,
   getBlockByHeight,
+  getTransactionsByBlockHash,
 } from "./env";
 import { toString } from "./utils";
 import { JSON } from "assemblyscript-json/assembly";
@@ -66,9 +67,9 @@ export function selectItemTest(): void {
 
   const jsonResult = toJson(result);
 
-  getResultFromJson(jsonResult, "id", "string")
-  getResultFromJson(jsonResult, "address", "string")
-  getResultFromJson(jsonResult, "value", "string")
+  getResultFromJson(jsonResult, "id", "string");
+  getResultFromJson(jsonResult, "address", "string");
+  getResultFromJson(jsonResult, "value", "string");
 }
 
 export function index(block_height: u64): void {
@@ -77,30 +78,56 @@ export function index(block_height: u64): void {
 
   const jsonResult = toJson(result);
 
-  getResultFromJson(jsonResult, "id", "int64")
-  getResultFromJson(jsonResult, "version", "int64")
-  getResultFromJson(jsonResult, "height", "string")
-  getResultFromJson(jsonResult, "previous_block", "string")
-  getResultFromJson(jsonResult, "merkle_root", "string")
-  getResultFromJson(jsonResult, "hash", "string")
-  getResultFromJson(jsonResult, "time", "int64")
-  getResultFromJson(jsonResult, "nonce", "int64")
-  getResultFromJson(jsonResult, "bits", "int64")
+  getResultFromJson(jsonResult, "id", "int64");
+  getResultFromJson(jsonResult, "version", "int64");
+  getResultFromJson(jsonResult, "height", "string");
+  getResultFromJson(jsonResult, "previous_block", "string");
+  getResultFromJson(jsonResult, "merkle_root", "string");
+  getResultFromJson(jsonResult, "time", "int64");
+  getResultFromJson(jsonResult, "nonce", "int64");
+  getResultFromJson(jsonResult, "bits", "int64");
 
+  const hash = getResultFromJson(jsonResult, "hash", "string");
+
+  const txHashesPtr = getTransactionsByBlockHash(hash);
+  const resultTxHashes = toString(txHashesPtr);
+  const jsonResultTxHashes = toJsonArray(resultTxHashes);
+
+  for (let i = 0; i < jsonResultTxHashes.valueOf().length; i++) {
+    const jsonObj = jsonResultTxHashes.valueOf()[i];
+
+    if (jsonObj.isObj) {
+      getResultFromJson(jsonObj as JSON.Obj, "id", "int64");
+      getResultFromJson(jsonObj as JSON.Obj, "hash", "string");
+      getResultFromJson(jsonObj as JSON.Obj, "block_hash", "string");
+      getResultFromJson(jsonObj as JSON.Obj, "block_id", "int64");
+      getResultFromJson(jsonObj as JSON.Obj, "lock_time", "int64");
+      getResultFromJson(jsonObj as JSON.Obj, "version", "int64");
+      getResultFromJson(jsonObj as JSON.Obj, "safe", "int64");
+    }
+  }
 }
 
-function getResultFromJson(jsonObj: JSON.Obj, fieldName: string, type: string): void {
+function getResultFromJson(
+  jsonObj: JSON.Obj,
+  fieldName: string,
+  type: string
+): string {
   if (type === "int64") {
     let valueOrNull: JSON.Integer | null = jsonObj.getInteger(fieldName);
     if (valueOrNull != null) {
       let value: i64 = valueOrNull.valueOf();
       consoleLog(fieldName + ": " + value.toString());
+      return value.toString();
     }
   } else {
     let valueOrNull: JSON.Str | null = jsonObj.getString(fieldName);
     if (valueOrNull != null) {
       let value: string = valueOrNull.valueOf();
       consoleLog(fieldName + ": " + value);
+      return value;
     }
   }
+
+  return "";
 }

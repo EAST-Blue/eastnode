@@ -195,6 +195,28 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("getBlockByHeight").
 		NewFunctionBuilder().
+		WithFunc(func(block_hash int32) uint32 {
+			// ^ the block_hash above is ptr for string
+			// TODO: Remove mocked data
+			result := []types.BitcoinTransaction{{
+
+				ID:        1,
+				Hash:      "3a6d490a7cf40819cdd826729d921ad5ab4b8347dfbec81179dd09aba0d25b37",
+				BlockHash: "000000009a940db389f3a7cbb8405f4ec14342bed36073b60ee63ed7e117f193",
+				BlockId:   189,
+				LockTime:  0,
+				Version:   1,
+				Safe:      0,
+			}}
+
+			serializedResult, _ := json.Marshal(result)
+
+			ptr := r.writeString(r.Mod.Memory(), string(serializedResult))
+
+			return uint32(ptr)
+		}).
+		Export("getTransactionsByBlockHash").
+		NewFunctionBuilder().
 		WithFunc(func(strPtr int32) {
 			// DEBUG
 			str := ToString(r.Mod.Memory(), int64(strPtr))
