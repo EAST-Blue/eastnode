@@ -58,6 +58,7 @@ func (q *Mempool) Enqueue(signedTx types.SignedTransaction) {
 		bMempool := tx.Bucket([]byte("mempool"))
 		bNonce := tx.Bucket([]byte("nonce"))
 
+		// ENSURE: make sure always start with 0 to ...
 		index, err := bMempool.NextSequence()
 
 		if err != nil {
@@ -82,8 +83,8 @@ func (q *Mempool) Enqueue(signedTx types.SignedTransaction) {
 	}
 }
 
-func (q *Mempool) Dequeue() types.Transaction {
-	btx := new(types.Transaction)
+func (q *Mempool) Dequeue() types.SignedTransaction {
+	btx := new(types.SignedTransaction)
 
 	err := q.db.Update(func(tx *bolt.Tx) error {
 		bMempool := tx.Bucket([]byte("mempool"))

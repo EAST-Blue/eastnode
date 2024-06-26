@@ -1,8 +1,10 @@
 package chain
 
 import (
+	"eastnode/runtime"
 	"eastnode/types"
 	"eastnode/utils"
+	store "eastnode/utils/store"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -10,6 +12,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/btcsuite/btcd/btcutil/bech32"
 	"github.com/cbergoon/merkletree"
 	"github.com/near/borsh-go"
 	bolt "go.etcd.io/bbolt"
@@ -21,19 +24,22 @@ type GenesisAccount struct {
 }
 
 type Chain struct {
-	Locked  bool
-	Store   *Store
-	Mempool *Mempool
+	// TODO: use sync.Mutex https://go.dev/tour/concurrency/9
+	Locked      bool
+	Store       *store.Store
+	Mempool     *Mempool
+	WasmRuntime *runtime.WasmRuntime
 }
 
 func (c *Chain) Init() *Chain {
-	c.Store = new(Store)
-	c.Store.Init()
+	c.Store = store.GetInstance(store.ChainDB)
 
 	c.Mempool = new(Mempool)
 	c.Mempool.Init(c.Store.KV)
 
-	log.Println("Chain initialized")
+	c.WasmRuntime = &runtime.WasmRuntime{Store: *store.GetInstance(store.SmartIndexDB)}
+
+	log.Println("[+] chain initialized")
 
 	c.ProduceBlock()
 
@@ -222,7 +228,7 @@ func (c *Chain) ProduceBlock() error {
 				Transaction: hex.EncodeToString(gTxPacked),
 			}
 
-			_, err = c.Store.Engine.Exec(fmt.Sprintf(`
+			_, err = c.Store.Instance.Exec(fmt.Sprintf(`
 				INSERT INTO transactions (id, block_id, signer, receiver, actions, created_at)
 				VALUES ('%s', '%d', '%s', '%s', '%x', '%d');`,
 				gSignedTx.ID, 0, gTx.Signer, gTx.Receiver, actionsPacked, genesisTime,
@@ -236,7 +242,7 @@ func (c *Chain) ProduceBlock() error {
 			})
 		}
 		var workingEngineHash string
-		workingEngineHashRaw := c.Store.Engine.QueryRow("SELECT dolt_hashof_db('WORKING')")
+		workingEngineHashRaw := c.Store.Instance.QueryRow("SELECT dolt_hashof_db('WORKING')")
 		workingEngineHashRaw.Scan(&workingEngineHash)
 
 		newBlock := new(types.Block)
@@ -273,7 +279,7 @@ func (c *Chain) ProduceBlock() error {
 
 		// consensus done
 		// commit block
-		_, err = c.Store.Engine.Exec("CALL DOLT_COMMIT('-Am', 'commit genesis block');")
+		_, err = c.Store.Instance.Exec("CALL DOLT_COMMIT('-Am', 'commit genesis block');")
 
 		if err != nil {
 			panic(err)
@@ -317,15 +323,9 @@ func (c *Chain) ProduceBlock() error {
 
 		// take the first 10 transactions
 		for i := uint64(0); i < pendingTx; i++ {
-			pSignedTx := c.Mempool.Get(i)
+			pSignedTx := c.Mempool.Get(i) // ensure pushback
 
-			txInBytes, err := hex.DecodeString(pSignedTx.Transaction)
-			if err != nil {
-				panic(err)
-			}
-
-			txUnpacked := new(types.Transaction)
-			borsh.Deserialize(txUnpacked, txInBytes)
+			txUnpacked := pSignedTx.Unpack()
 
 			q := fmt.Sprintf(`
 				INSERT INTO transactions (id, block_id, signer, receiver, actions, created_at)
@@ -333,7 +333,21 @@ func (c *Chain) ProduceBlock() error {
 				pSignedTx.ID, blockHeight+1, txUnpacked.Signer, txUnpacked.Receiver, txUnpacked.Actions, blockTime,
 			)
 
-			_, err = c.Store.Engine.Exec(q)
+			// Process actions
+
+			parsedActions := new([]types.Action)
+
+			for _, action := range *parsedActions {
+				if action.Kind == "deploy" || action.Kind == "redeploy" {
+					c.ProcessDeploy(txUnpacked, action)
+				} else if action.Kind == "call" {
+					c.ProcessCall(txUnpacked, action)
+				} else if action.Kind == "view" {
+					// TODO: handle view function in the front, before going into produce block, so there'll be no view function here
+				}
+			}
+
+			_, err := c.Store.Instance.Exec(q)
 			if err != nil {
 				panic(err)
 			}
@@ -345,7 +359,7 @@ func (c *Chain) ProduceBlock() error {
 		}
 
 		var workingEngineHash string
-		workingEngineHashRaw := c.Store.Engine.QueryRow("SELECT dolt_hashof_db('WORKING')")
+		workingEngineHashRaw := c.Store.Instance.QueryRow("SELECT dolt_hashof_db('WORKING')")
 		workingEngineHashRaw.Scan(&workingEngineHash)
 
 		log.Println("new storage hash: " + workingEngineHash)
@@ -390,7 +404,7 @@ func (c *Chain) ProduceBlock() error {
 
 		// consensus done
 		// commit block
-		_, err = c.Store.Engine.Exec(fmt.Sprintf(`
+		_, err = c.Store.Instance.Exec(fmt.Sprintf(`
 			CALL DOLT_COMMIT('-Am', 'commit new block %d');
 		`, newBlock.Header.Height))
 
@@ -404,11 +418,12 @@ func (c *Chain) ProduceBlock() error {
 		}
 
 		var cEngineHash string
-		cEngineHashRaw := c.Store.Engine.QueryRow("SELECT dolt_hashof_db()")
+		cEngineHashRaw := c.Store.Instance.QueryRow("SELECT dolt_hashof_db()")
 		cEngineHashRaw.Scan(&cEngineHash)
 
 		log.Println("check storage hash: " + cEngineHash)
 
+		// REFACTOR: block commit to a new function. duplicate with genesis block up there.
 		c.Store.KV.Update(func(tx *bolt.Tx) error {
 			bBlocks := tx.Bucket([]byte("blocks"))
 			bCommon := tx.Bucket([]byte("common"))
@@ -430,4 +445,64 @@ func (c *Chain) ProduceBlock() error {
 	}
 
 	return nil
+}
+
+func (c *Chain) ProcessWasmCall(signer string, smartIndexAddress string, functionName string, args []string, kind types.ActionKind) any {
+
+	var resultWasmBlob []byte
+	sr := c.Store.Instance.QueryRow(fmt.Sprintf("SELECT wasm_blob FROM smart_index WHERE smart_index_address = '%s';", smartIndexAddress))
+	sr.Scan(&resultWasmBlob)
+
+	return c.WasmRuntime.RunWasmFunction(runtime.Address(signer), resultWasmBlob, smartIndexAddress, functionName, args, types.Call)
+}
+
+func (c *Chain) ProcessCall(tx types.Transaction, action types.Action) {
+	c.ProcessWasmCall(tx.Signer, tx.Receiver, action.FunctionName, action.Args, types.Call)
+}
+
+func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string {
+	txSerialized, err := borsh.Serialize(tx)
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO: Validate wasm file
+	wasmBytes := action.Args[0]
+
+	var q string
+	var smartIndexAddress string
+
+	if len(action.Args) == 1 { // new smart index
+		// generate contract account based on the initial tx
+		txHash, err := hex.DecodeString(utils.SHA256(txSerialized))
+		if err != nil {
+			panic(err)
+		}
+
+		smartIndexAddress, err = bech32.EncodeFromBase256("idx", txHash)
+		if err != nil {
+			panic(err)
+		}
+
+		// maximum length is 64, trimmed this to 32 chars
+		smartIndexAddress = smartIndexAddress[:32]
+
+		q = fmt.Sprintf(`
+				INSERT INTO smart_index (smart_index_address, owner_address, wasm_blob)
+				VALUES ('%s', '%s', x'%s');`, smartIndexAddress, tx.Signer, wasmBytes,
+		)
+	} else { // redeploy
+		smartIndexAddress = action.Args[1]
+		q = fmt.Sprintf(`
+				UPDATE smart_index SET wasm_blob = x'%s' WHERE smart_index_address = '%s';`, wasmBytes, smartIndexAddress,
+		)
+	}
+
+	_, err = c.Store.Instance.Exec(q)
+	if err != nil {
+		// TODO: handle error here, do not panic
+		// log.Panicln(err)
+	}
+
+	return smartIndexAddress
 }

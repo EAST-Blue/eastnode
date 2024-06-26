@@ -14,6 +14,12 @@ require (
 )
 
 require (
+	github.com/btcsuite/btcd v0.24.0 // indirect
+	github.com/btcsuite/btcd/btcutil v1.1.5 // indirect
+	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0 // indirect
+)
+
+require (
 	cloud.google.com/go v0.114.0 // indirect
 	cloud.google.com/go/auth v0.5.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.2 // indirect
@@ -27,6 +33,7 @@ require (
 	github.com/apache/thrift v0.20.0 // indirect
 	github.com/aws/aws-sdk-go v1.53.19 // indirect
 	github.com/bcicen/jstream v1.0.1 // indirect
+	github.com/boltdb/bolt v1.3.1
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
@@ -61,6 +68,8 @@ require (
 	github.com/googleapis/gax-go/v2 v2.12.4 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
+	github.com/iancoleman/strcase v0.3.0 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/juju/gnuflag v1.0.0 // indirect
@@ -74,6 +83,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
+	github.com/ompluscator/dynamic-struct v1.4.0 // indirect
 	github.com/oracle/oci-go-sdk/v65 v65.67.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -86,7 +96,13 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/sony/gobreaker v1.0.0 // indirect
 	github.com/tetratelabs/wazero v1.7.2 // indirect
+	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
+	github.com/uptrace/bun v1.2.1 // indirect
+	github.com/uptrace/bun/dialect/mysqldialect v1.2.1 // indirect
+	github.com/uptrace/bun/extra/bundebug v1.2.1 // indirect
 	github.com/vbauerster/mpb/v8 v8.7.3 // indirect
+	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
+	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/xitongsys/parquet-go v1.6.2 // indirect
 	github.com/xitongsys/parquet-go-source v0.0.0-20240122235623-d6294584ab18 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect

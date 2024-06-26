@@ -1,2 +1,5 @@
 script/tx_builder/node_modules
 db/*
+
+node_modules
+build

@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"log"
 	"os"
+
+	"github.com/near/borsh-go"
 )
 
 func Itob(v uint64) []byte {
@@ -36,4 +38,29 @@ func SHA256(b []byte) string {
 	}
 
 	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func SHA512(b []byte) string {
+	hasher := crypto.SHA512.New()
+	_, err := hasher.Write(b)
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+func DecodeHexAndBorshDeserialize(target interface{}, s string) []byte {
+	bytes, err := hex.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+
+	err = borsh.Deserialize(target, bytes)
+	if err != nil {
+		panic(err)
+	}
+
+	return bytes
 }

@@ -2,12 +2,12 @@ package types
 
 import (
 	"crypto/sha256"
+	"eastnode/utils"
 	"encoding/hex"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/cbergoon/merkletree"
 	"github.com/dustinxie/ecc"
-	"github.com/near/borsh-go"
 )
 
 // Kind: ["call", "view", "deploy", "genesis"]
@@ -18,6 +18,13 @@ type Action struct {
 	FunctionName string   `json:"function_name"`
 	Args         []string `json:"args"`
 }
+
+type ActionKind int
+
+const (
+	Call ActionKind = 0
+	View ActionKind = 1
+)
 
 type RpcReply struct {
 	BlockHash   string `json:"block_hash"`
@@ -35,31 +42,13 @@ type SignedTransaction struct {
 func (st *SignedTransaction) Unpack() Transaction {
 	txUnpacked := new(Transaction)
 
-	txBytes, err := hex.DecodeString(st.Transaction)
-	if err != nil {
-		panic(err)
-	}
-
-	err = borsh.Deserialize(txUnpacked, txBytes)
-	if err != nil {
-		panic(err)
-	}
+	utils.DecodeHexAndBorshDeserialize(txUnpacked, st.Transaction)
 
 	return *txUnpacked
 }
 
 func (st *SignedTransaction) IsValid() bool {
-	txUnpacked := new(Transaction)
-
-	txBytes, err := hex.DecodeString(st.Transaction)
-	if err != nil {
-		panic(err)
-	}
-
-	err = borsh.Deserialize(txUnpacked, txBytes)
-	if err != nil {
-		panic(err)
-	}
+	txUnpacked := st.Unpack()
 
 	pubKeyBytes, err := hex.DecodeString(txUnpacked.Signer)
 	if err != nil {
@@ -76,6 +65,7 @@ func (st *SignedTransaction) IsValid() bool {
 		panic(err)
 	}
 
+	txBytes, _ := hex.DecodeString(st.Transaction)
 	hashedMsg := sha256.Sum256(txBytes)
 	verified := ecc.VerifyBytes(pubKey.ToECDSA(), hashedMsg[:], sigBytes, ecc.Normal)
 
@@ -134,6 +124,7 @@ func (t MerkleTreeContent) Equals(other merkletree.Content) (bool, error) {
 
 type BlockHeader struct {
 	ChainID     string
+	BitcoinHash string
 	Height      uint64
 	Time        int64
 	LastBlockID []byte
@@ -145,3 +136,44 @@ type Block struct {
 	Data   []byte
 }
 type BlockHash []byte
+
+// WasmRuntime
+
+type BitcoinBlockHeader struct {
+	ID            int64  `json:"id"`
+	Version       int64  `json:"version"`
+	Height        int64  `json:"height"`
+	PreviousBlock string `json:"previous_block"`
+	MerkleRoot    string `json:"merkle_root"`
+	Hash          string `json:"hash"`
+	Time          int64  `json:"time"`
+	Nonce         int64  `json:"nonce"`
+	Bits          int64  `json:"bits"`
+}
+
+type BitcoinTransaction struct {
+	ID        int64  `json:"id"`
+	Hash      string `json:"hash"`
+	BlockHash string `json:"block_hash"`
+	BlockId   int64  `json:"block_id"`
+	LockTime  int64  `json:"lock_time"`
+	Version   int64  `json:"version"`
+	Safe      int64  `json:"safe"`
+}
+
+type BitcoinOutpoint struct {
+	ID              int64  `json:"id"`
+	Value           int64  `json:"value"`
+	SpendingTxId    int64  `json:"spending_tx_id"`
+	SpendingTxHash  string `json:"spending_tx_hash"`
+	SpendingTxIndex int64  `json:"spending_tx_index"`
+	Sequence        int64  `json:"sequence"`
+	FundingTxId     int64  `json:"funding_tx_id"`
+	FundingTxHash   string `json:"funding_tx_hash"`
+	FundingTxIndex  int64  `json:"funding_tx_index"`
+	SignatureScript string `json:"signature_script"`
+	PkScript        string `json:"pk_script"`
+	Witness         string `json:"witness"`
+	Spender         string `json:"spender"`
+	Type            string `json:"type"`
+}
