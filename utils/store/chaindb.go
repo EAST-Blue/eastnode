@@ -27,7 +27,7 @@ func (s *Store) InitChainDb() {
 				block_id BIGINT,
 				signer VARCHAR(255),
 				receiver VARCHAR(255),
-				actions VARBINARY(1024),
+				actions BLOB,
 				created_at BIGINT,
 				primary key(id)
 			);
