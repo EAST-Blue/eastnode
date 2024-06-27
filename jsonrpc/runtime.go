@@ -4,6 +4,7 @@ import (
 	"eastnode/chain"
 	"eastnode/types"
 	"eastnode/utils"
+	"encoding/hex"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -55,16 +56,30 @@ func (s *RuntimeServer) Query(r *http.Request, params *types.RuntimeServerQuery,
 	blockHeight := s.Chain.GetBlockHeight()
 	blockHash := s.Chain.GetBlockHash(blockHeight)
 
-	result, err := json.Marshal(params)
+	if params.FunctionName == "get_smart_index_wasm" {
+		smartIndexAddress := params.Args[0]
 
-	if err != nil {
-		panic(err)
-	}
+		smartIndexWasm := s.Chain.GetSmartIndexWasm(smartIndexAddress)
 
-	*reply = types.ServerQueryReply{
-		BlockHash:   blockHash,
-		BlockHeight: blockHeight,
-		Result:      string(result[:]),
+		*reply = types.ServerQueryReply{
+			BlockHash:   blockHash,
+			BlockHeight: blockHeight,
+			Result:      hex.EncodeToString(smartIndexWasm),
+		}
+
+	} else if params.FunctionName == "view_function" {
+
+		smartIndexAddress := params.Args[0]
+		functionName := params.Args[1]
+
+		result, _ := json.Marshal(s.Chain.ProcessWasmCall("", smartIndexAddress, functionName, params.Args[1:], types.View))
+
+		*reply = types.ServerQueryReply{
+			BlockHash:   blockHash,
+			BlockHeight: blockHeight,
+			Result:      hex.EncodeToString(result),
+		}
+
 	}
 
 	return nil

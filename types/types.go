@@ -69,7 +69,7 @@ func (st *SignedTransaction) IsValid() bool {
 	hashedMsg := sha256.Sum256(txBytes)
 	verified := ecc.VerifyBytes(pubKey.ToECDSA(), hashedMsg[:], sigBytes, ecc.Normal)
 
-	hashedSignature := utils.SHA256(sigBytes)
+	hashedSignature := utils.SHA256([]byte(st.Signature))
 
 	if hashedSignature != st.ID {
 		panic("TxId invalid")

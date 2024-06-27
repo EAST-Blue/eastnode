@@ -464,7 +464,7 @@ func (c *Chain) ProcessCall(tx types.Transaction, action types.Action) {
 }
 
 func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string {
-	txSerialized, err := borsh.Serialize(tx)
+	actionSerialized, err := borsh.Serialize(action)
 	if err != nil {
 		panic(err)
 	}
@@ -477,12 +477,13 @@ func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string 
 
 	if len(action.Args) == 1 { // new smart index
 		// generate contract account based on the initial tx
-		txHash, err := hex.DecodeString(utils.SHA256(txSerialized))
+		publicKey, err := hex.DecodeString(tx.Signer)
+		hash, err := hex.DecodeString(utils.SHA256(append(actionSerialized, publicKey...)))
 		if err != nil {
 			panic(err)
 		}
 
-		smartIndexAddress, err = bech32.EncodeFromBase256("idx", txHash)
+		smartIndexAddress, err = bech32.EncodeFromBase256("idx", hash)
 		if err != nil {
 			panic(err)
 		}
@@ -490,9 +491,10 @@ func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string 
 		// maximum length is 64, trimmed this to 32 chars
 		smartIndexAddress = smartIndexAddress[:32]
 
+		// TODO: change this to query, exec to prevent sqli
 		q = fmt.Sprintf(`
 				INSERT INTO smart_index (smart_index_address, owner_address, wasm_blob)
-				VALUES ('%s', '%s', x'%s');`, smartIndexAddress, tx.Signer, wasmBytes,
+				VALUES ('%s', '%s', X'%s');`, smartIndexAddress, tx.Signer, wasmBytes,
 		)
 	} else { // redeploy
 		smartIndexAddress = action.Args[1]
@@ -504,8 +506,16 @@ func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string 
 	_, err = c.Store.Instance.Exec(q)
 	if err != nil {
 		// TODO: handle error here, do not panic
-		// log.Panicln(err)
+		fmt.Println(err)
 	}
 
 	return smartIndexAddress
+}
+
+func (c *Chain) GetSmartIndexWasm(smartIndexAddress string) []byte {
+	var wasmBlob []byte
+	wasmBlobRaw := c.Store.Instance.QueryRow("SELECT wasm_blob FROM smart_index WHERE smart_index_address = ?", smartIndexAddress)
+	wasmBlobRaw.Scan(&wasmBlob)
+
+	return wasmBlob
 }
