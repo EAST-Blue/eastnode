@@ -68,10 +68,8 @@ func (s *RuntimeServer) Query(r *http.Request, params *types.RuntimeServerQuery,
 		}
 
 	} else if params.FunctionName == "view_function" {
-
-		smartIndexAddress := params.Args[0]
-		functionName := params.Args[1]
-
+		smartIndexAddress := params.Target
+		functionName := params.Args[0]
 		result, _ := json.Marshal(s.Chain.ProcessWasmCall("", smartIndexAddress, functionName, params.Args[1:], types.View))
 
 		*reply = types.ServerQueryReply{
