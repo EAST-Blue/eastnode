@@ -308,7 +308,7 @@ func (r *WasmRuntime) RunWasmFunction(signer Address, wasmBytes []byte, smartInd
 	_, err := f.Call(ctx, argsPtr...)
 
 	if err != nil {
-		log.Panicln(err)
+		fmt.Println("Error", err)
 	}
 
 	return output
