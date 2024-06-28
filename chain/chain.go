@@ -519,3 +519,25 @@ func (c *Chain) GetSmartIndexWasm(smartIndexAddress string) []byte {
 
 	return wasmBlob
 }
+
+func (c *Chain) GetTransaction(txId string) map[string]interface{} {
+
+	var blockId string
+	var signer string
+	var receiver string
+	var actions string
+	var createdAt int64
+
+	selectRaw := c.Store.Instance.QueryRow("SELECT block_id, signer, receiver, actions, created_at FROM transactions WHERE id = ?", txId)
+	selectRaw.Scan(&blockId, &signer, &receiver, &actions, &createdAt)
+
+	res := map[string]interface{}{
+		"block_id":   blockId,
+		"signer":     signer,
+		"receiver":   receiver,
+		"actions":    actions,
+		"created_at": createdAt,
+	}
+
+	return res
+}
