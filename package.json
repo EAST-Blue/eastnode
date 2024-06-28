@@ -8,6 +8,8 @@
   "scripts": {
     "run-cmd": "go run cmd/main.go",
     "build-as": "cd wasm-sdk; yarn asbuild; cp build/release.wasm ../build/release.wasm",
-    "build:rpc": "go build -o build/rpc cmd/json-rpc/main.go "
+    "build:rpc": "go build -o build/rpc cmd/index/main.go",
+    "build:indexer": "go build -o build/indexer cmd/indexer/main.go",
+    "start:indexer": "build/indexer"
   }
 }
