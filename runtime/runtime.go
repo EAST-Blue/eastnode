@@ -95,7 +95,6 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 			primaryKeyStr := ToString(r.Mod.Memory(), int64(primaryKey))
 			tableSchemaStr := ToString(r.Mod.Memory(), int64(tableSchema))
 
-			// TODO: get contract address from blockchain
 			CreateTable(r.Store, smartIndexAddress, tableNameStr, primaryKeyStr, tableSchemaStr)
 
 			// WORKAROUND: showTables()
@@ -112,7 +111,6 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 			tableNameStr := ToString(r.Mod.Memory(), int64(tableName))
 			valuesStr := ToString(r.Mod.Memory(), int64(values))
 
-			// TODO: get contract address from blockchain
 			Insert(r.Store, smartIndexAddress, tableNameStr, valuesStr)
 
 			// WORKAROUND: showTables()
@@ -130,7 +128,6 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 			whereConditionStr := ToString(r.Mod.Memory(), int64(whereCondition))
 			valuesStr := ToString(r.Mod.Memory(), int64(values))
 
-			// TODO: get contract address from blockchain
 			Update(r.Store, smartIndexAddress, tableNameStr, whereConditionStr, valuesStr)
 
 			// WORKAROUND: showTables()
@@ -147,7 +144,6 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 			tableNameStr := ToString(r.Mod.Memory(), int64(tableName))
 			whereConditionStr := ToString(r.Mod.Memory(), int64(whereCondition))
 
-			// TODO: get contract address from blockchain
 			Delete(r.Store, smartIndexAddress, tableNameStr, whereConditionStr)
 
 			// WORKAROUND: showTables()
@@ -157,14 +153,9 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		Export("deleteItem").
 		NewFunctionBuilder().
 		WithFunc(func(tableName int32, whereCondition int32) uint32 {
-			if kind != types.Call {
-				log.Panicln("Cannot call function on view")
-				return 0
-			}
 			tableNameStr := ToString(r.Mod.Memory(), int64(tableName))
 			whereConditionStr := ToString(r.Mod.Memory(), int64(whereCondition))
 
-			// TODO: get contract address from blockchain
 			result := Select(r.Store, smartIndexAddress, tableNameStr, whereConditionStr)
 
 			ptr := r.writeString(r.Mod.Memory(), result)

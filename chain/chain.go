@@ -456,7 +456,7 @@ func (c *Chain) ProcessWasmCall(signer string, smartIndexAddress string, functio
 	sr := c.Store.Instance.QueryRow(fmt.Sprintf("SELECT wasm_blob FROM smart_index WHERE smart_index_address = '%s';", smartIndexAddress))
 	sr.Scan(&resultWasmBlob)
 
-	return c.WasmRuntime.RunWasmFunction(runtime.Address(signer), resultWasmBlob, smartIndexAddress, functionName, args, types.Call)
+	return c.WasmRuntime.RunWasmFunction(runtime.Address(signer), resultWasmBlob, smartIndexAddress, functionName, args, kind)
 }
 
 func (c *Chain) ProcessCall(tx types.Transaction, action types.Action) {
