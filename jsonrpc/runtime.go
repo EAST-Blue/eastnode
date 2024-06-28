@@ -80,6 +80,16 @@ func (s *RuntimeServer) Query(r *http.Request, params *types.RuntimeServerQuery,
 			Result:      hex.EncodeToString(result),
 		}
 
+	} else if params.FunctionName == "get_transaction" {
+		txId := params.Args[0]
+
+		result, _ := json.Marshal(s.Chain.GetTransaction(txId))
+
+		*reply = types.ServerQueryReply{
+			BlockHash:   blockHash,
+			BlockHeight: blockHeight,
+			Result:      hex.EncodeToString(result),
+		}
 	}
 
 	return nil
