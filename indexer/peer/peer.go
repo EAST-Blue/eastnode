@@ -88,7 +88,7 @@ func (p *Peer) Run() error {
 			return fmt.Errorf("PushGetBlocksMsg: error %v", err)
 		}
 
-		select {}
-		// <-p.queueDone
+		<-p.queueDone
+		time.Sleep(1 * time.Second)
 	}
 }

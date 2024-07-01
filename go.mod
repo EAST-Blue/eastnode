@@ -12,6 +12,7 @@ require (
 	github.com/dustinxie/ecc v0.0.0-20210511000915-959544187564
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/rpc v1.2.1
+	github.com/libsv/go-bt/v2 v2.2.5
 	github.com/near/borsh-go v0.3.1
 	go.etcd.io/bbolt v1.3.10
 	gorm.io/driver/mysql v1.5.6
@@ -25,6 +26,8 @@ require (
 	github.com/decred/dcrd/crypto/blake256 v1.0.1 // indirect
 	github.com/decred/dcrd/lru v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/libsv/go-bk v0.1.6 // indirect
+	github.com/rogpeppe/go-internal v1.9.0 // indirect
 )
 
 require (
@@ -83,7 +86,6 @@ require (
 	github.com/kch42/buzhash v0.0.0-20160816060738-9bdec3dec7c6 // indirect
 	github.com/klauspost/compress v1.17.8 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lestrrat-go/strftime v1.0.6 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

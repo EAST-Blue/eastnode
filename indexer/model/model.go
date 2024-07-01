@@ -6,6 +6,11 @@ import (
 	"gorm.io/gorm"
 )
 
+type P2shAsmScripts struct {
+	LockScripts   []string
+	UnlockScripts []string
+}
+
 type Block struct {
 	gorm.Model
 
@@ -57,6 +62,10 @@ type OutPoint struct {
 	Value          int64  `json:"value"`
 	Spender        string `json:"spender"`
 	Type           string `json:"type"`
+
+	P2shAsmScripts    *P2shAsmScripts `json:"p2sh_asm_scripts" gorm:"-"`
+	PkAsmScripts      *[]string       `json:"pk_asm_scripts" gorm:"-"`
+	WitnessAsmScripts *[]string       `json:"witness_asm_scripts" gorm:"-"`
 }
 
 func NewDB(dialector gorm.Dialector, opts ...gorm.Option) (*gorm.DB, error) {
