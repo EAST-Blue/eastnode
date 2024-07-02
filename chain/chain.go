@@ -350,6 +350,8 @@ func (c *Chain) ProduceBlock() error {
 				pSignedTx.ID, blockHeight+1, txUnpacked.Signer, txUnpacked.Receiver, txUnpacked.Actions, blockTime,
 			)
 
+			// TODO: create another table for logs (tx_id, logs)
+
 			_, err := c.Store.Instance.Exec(q)
 			if err != nil {
 				panic(err)
