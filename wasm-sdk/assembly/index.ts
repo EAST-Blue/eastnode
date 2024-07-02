@@ -10,30 +10,28 @@ import {
   updateRows,
   deleteRows,
   getTxUTXOByBlockHeight,
+  Table,
 } from "./sdk";
 
 // TODO: create Table class
-class OrdinalsTable {
-  public static name: string = "ordinals";
-  public static schema: Column[] = [
-    new Column("id", "int64"),
-    new Column("address", "string"),
-    new Column("value", "int64"),
-  ];
-}
+const ordinalsTable = new Table("ordinals", [
+  new Column("id", "int64"),
+  new Column("address", "string"),
+  new Column("value", "int64"),
+]);
 
 export function init(): void {
-  create(OrdinalsTable.name, "id", OrdinalsTable.schema);
+  ordinalsTable.init("id");
 }
 
 export function getOrdinal(id_ptr: i32): string {
   const id = ptrToString(id_ptr);
-  return selectRow(OrdinalsTable.name, [new Column("id", id)]);
+  return ordinalsTable.select([new Column("id", id)]);
 }
 
 // Testing functions
 export function insertItemTest(): void {
-  insertRow(OrdinalsTable.name, [
+  ordinalsTable.insert([
     new Column("id", "0"),
     new Column("address", "bc1q0d4836j3ekmm9cz7v3kcf0sdsxtmzg4ttpu7dm"),
     new Column("value", "1000"),
@@ -41,19 +39,18 @@ export function insertItemTest(): void {
 }
 
 export function updateItemTest(): void {
-  updateRows(
-    OrdinalsTable.name,
+  ordinalsTable.update(
     [new Column("id", "0")],
     [new Column("address", "bc1qjr4gcelycyck4yxcnx5xt3w26u28veyu7meley")]
   );
 }
 
 export function deleteItemTest(): void {
-  deleteRows(OrdinalsTable.name, [new Column("id", "0")]);
+  ordinalsTable.delete([new Column("id", "0")]);
 }
 
 export function selectItemTest(): void {
-  const result = selectRow(OrdinalsTable.name, [new Column("id", "0")]);
+  const result = ordinalsTable.select([new Column("id", "0")]);
   const jsonResult = toJson(result);
 
   consoleLog(getResultFromJson(jsonResult, "id", "string"));

@@ -10,6 +10,36 @@ import {
   updateItem,
 } from "./env";
 
+export class Table {
+  public name: string;
+  public schema: Column[];
+
+  constructor(name: string, schema: Column[]) {
+    this.name = name;
+    this.schema = schema;
+  }
+
+  public init(primaryKey: string): void {
+    create(this.name, primaryKey, this.schema);
+  }
+
+  public select(whereCondition: TableSchema): string {
+    return selectRow(this.name, whereCondition);
+  }
+
+  public insert(values: TableSchema): void {
+    insertRow(this.name, values);
+  }
+
+  public update(whereCondition: TableSchema, values: TableSchema): void {
+    updateRows(this.name, whereCondition, values);
+  }
+
+  public delete(whereCondition: TableSchema): void {
+    deleteRows(this.name, whereCondition)
+  }
+}
+
 export class Column {
   name: string;
   type: string;
@@ -232,5 +262,5 @@ export function getTxUTXOByBlockHeight(block_height: u64): UTXO[] {
       }
     }
   }
-  return UTXOs
+  return UTXOs;
 }
