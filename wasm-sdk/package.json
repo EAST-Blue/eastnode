@@ -1,20 +1,13 @@
 {
-  "name": "wasm-sdk",
+  "name": "east-wasm-sdk",
   "version": "1.0.0",
-  "main": "index.js",
   "license": "MIT",
   "dependencies": {
     "as-bignum": "^0.3.1",
     "assemblyscript": "^0.27.27",
     "assemblyscript-json": "^1.1.0"
   },
-  "type": "module",
-  "exports": {
-    ".": {
-      "import": "./build/release.js",
-      "types": "./build/release.d.ts"
-    }
-  },
+  "types": "assembly/index.ts",
   "scripts": {
     "asbuild:debug": "asc assembly/index.ts assembly/external.ts --target debug",
     "asbuild:release": "asc assembly/index.ts assembly/external.ts --target release ",

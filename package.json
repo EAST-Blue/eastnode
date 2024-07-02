@@ -7,7 +7,7 @@
   "license": "TBD",
   "scripts": {
     "run-cmd": "go run cmd/main.go",
-    "build-as": "cd wasm-sdk; yarn asbuild; cp build/release.wasm ../build/release.wasm",
+    "build-as": "cd wasm-test; yarn; yarn asbuild; cp build/release.wasm ../build/release.wasm",
     "build:rpc": "go build -o build/rpc cmd/json-rpc/main.go "
   }
 }
