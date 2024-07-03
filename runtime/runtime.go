@@ -29,8 +29,9 @@ const (
 type Address string
 
 type WasmRuntime struct {
-	Store store.Store
-	Mod   api.Module
+	Store       store.Store
+	Mod         api.Module
+	IndexerRepo *repository.IndexerRepository
 }
 
 // ref: https://github.com/RPG-18/wasmer-go-assemblyscript/blob/main/assemblyscript/go.ts
@@ -81,7 +82,7 @@ func (r *WasmRuntime) writeString(memory api.Memory, str string) uint32 {
 	return uint32(stringOffset)
 }
 
-func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndexAddress string, signer Address, kind types.ActionKind, output *string, indexerRepo *repository.IndexerRepository) api.Module {
+func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndexAddress string, signer Address, kind types.ActionKind, output *string) api.Module {
 	wazeroRuntime := wazero.NewRuntime(ctx)
 
 	envBuilder := wazeroRuntime.
@@ -175,7 +176,7 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		Export("selectItem").
 		NewFunctionBuilder().
 		WithFunc(func(height int64) uint32 {
-			result, err := indexerRepo.GetBlockByHeight(height)
+			result, err := r.IndexerRepo.GetBlockByHeight(height)
 			if err != nil {
 				panic(err)
 			}
@@ -189,7 +190,7 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		Export("getBlockByHeight").
 		NewFunctionBuilder().
 		WithFunc(func(blockHash string) uint32 {
-			result, err := indexerRepo.GetTransactionsByBlockHash(blockHash)
+			result, err := r.IndexerRepo.GetTransactionsByBlockHash(blockHash)
 			if err != nil {
 				panic(err)
 			}
@@ -203,7 +204,7 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		Export("getTransactionsByBlockHash").
 		NewFunctionBuilder().
 		WithFunc(func(transactionHash string) uint32 {
-			result, err := indexerRepo.GetOutpointsByTransactionHash(transactionHash)
+			result, err := r.IndexerRepo.GetOutpointsByTransactionHash(transactionHash)
 			if err != nil {
 				panic(err)
 			}
@@ -260,12 +261,12 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 	return mod
 }
 
-func (r *WasmRuntime) RunWasmFunction(signer Address, wasmBytes []byte, smartIndexAddress string, functionName string, args []string, kind types.ActionKind, indexerRepo *repository.IndexerRepository) any {
+func (r *WasmRuntime) RunWasmFunction(signer Address, wasmBytes []byte, smartIndexAddress string, functionName string, args []string, kind types.ActionKind) any {
 	ctx := context.Background()
 	defer ctx.Done()
 
 	var output string
-	mod := r.loadWasm(wasmBytes, ctx, smartIndexAddress, signer, kind, &output, indexerRepo)
+	mod := r.loadWasm(wasmBytes, ctx, smartIndexAddress, signer, kind, &output)
 	f := mod.ExportedFunction(functionName)
 
 	// All arguments are stringified pointers

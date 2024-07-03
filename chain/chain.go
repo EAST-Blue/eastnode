@@ -30,7 +30,6 @@ type Chain struct {
 	Store       *store.Store
 	Mempool     *Mempool
 	WasmRuntime *runtime.WasmRuntime
-	IndexerRepo *repository.IndexerRepository
 }
 
 func (c *Chain) Init() *Chain {
@@ -39,10 +38,9 @@ func (c *Chain) Init() *Chain {
 	c.Mempool = new(Mempool)
 	c.Mempool.Init(c.Store.KV)
 
-	c.WasmRuntime = &runtime.WasmRuntime{Store: *store.GetInstance(store.SmartIndexDB)}
-
 	indexerInstance := store.GetInstance(store.IndexerDB)
-	c.IndexerRepo = repository.NewIndexerRepository(indexerInstance.Gorm)
+	indexerRepo := repository.NewIndexerRepository(indexerInstance.Gorm)
+	c.WasmRuntime = &runtime.WasmRuntime{Store: *store.GetInstance(store.SmartIndexDB), IndexerRepo: indexerRepo}
 
 	log.Println("[+] chain initialized")
 
@@ -458,7 +456,7 @@ func (c *Chain) ProcessWasmCall(signer string, smartIndexAddress string, functio
 	sr := c.Store.Instance.QueryRow(fmt.Sprintf("SELECT wasm_blob FROM smart_index WHERE smart_index_address = '%s';", smartIndexAddress))
 	sr.Scan(&resultWasmBlob)
 
-	return c.WasmRuntime.RunWasmFunction(runtime.Address(signer), resultWasmBlob, smartIndexAddress, functionName, args, types.Call, c.IndexerRepo)
+	return c.WasmRuntime.RunWasmFunction(runtime.Address(signer), resultWasmBlob, smartIndexAddress, functionName, args, types.Call)
 }
 
 func (c *Chain) ProcessCall(tx types.Transaction, action types.Action) {
