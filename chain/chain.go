@@ -330,25 +330,30 @@ func (c *Chain) ProduceBlock() error {
 
 			txUnpacked := pSignedTx.Unpack()
 
-			q := fmt.Sprintf(`
-				INSERT INTO transactions (id, block_id, signer, receiver, actions, created_at)
-				VALUES ('%s', '%d', '%s', '%s', '%s', '%d');`,
-				pSignedTx.ID, blockHeight+1, txUnpacked.Signer, txUnpacked.Receiver, txUnpacked.Actions, blockTime,
-			)
+			parsedActions := new([]types.Action)
+			utils.DecodeHexAndBorshDeserialize(parsedActions, txUnpacked.Actions)
 
 			// Process actions
-
-			parsedActions := new([]types.Action)
-
-			for _, action := range *parsedActions {
+			for i, action := range *parsedActions {
 				if action.Kind == "deploy" || action.Kind == "redeploy" {
 					c.ProcessDeploy(txUnpacked, action)
+					// WORKAROUND: file is too large for column 'actions'
+					(*parsedActions)[i].Args = []string{}
+					txUnpacked.Actions = utils.BorshSerializeAndEncodeHex(parsedActions)
 				} else if action.Kind == "call" {
 					c.ProcessCall(txUnpacked, action)
 				} else if action.Kind == "view" {
 					// TODO: handle view function in the front, before going into produce block, so there'll be no view function here
 				}
 			}
+
+			q := fmt.Sprintf(`
+				INSERT INTO transactions (id, block_id, signer, receiver, actions, created_at)
+				VALUES ('%s', '%d', '%s', '%s', '%s', '%d');`,
+				pSignedTx.ID, blockHeight+1, txUnpacked.Signer, txUnpacked.Receiver, txUnpacked.Actions, blockTime,
+			)
+
+			// TODO: create another table for logs (tx_id, logs)
 
 			_, err := c.Store.Instance.Exec(q)
 			if err != nil {
@@ -456,7 +461,7 @@ func (c *Chain) ProcessWasmCall(signer string, smartIndexAddress string, functio
 	sr := c.Store.Instance.QueryRow(fmt.Sprintf("SELECT wasm_blob FROM smart_index WHERE smart_index_address = '%s';", smartIndexAddress))
 	sr.Scan(&resultWasmBlob)
 
-	return c.WasmRuntime.RunWasmFunction(runtime.Address(signer), resultWasmBlob, smartIndexAddress, functionName, args, types.Call)
+	return c.WasmRuntime.RunWasmFunction(runtime.Address(signer), resultWasmBlob, smartIndexAddress, functionName, args, kind)
 }
 
 func (c *Chain) ProcessCall(tx types.Transaction, action types.Action) {
@@ -464,7 +469,7 @@ func (c *Chain) ProcessCall(tx types.Transaction, action types.Action) {
 }
 
 func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string {
-	txSerialized, err := borsh.Serialize(tx)
+	actionSerialized, err := borsh.Serialize(action)
 	if err != nil {
 		panic(err)
 	}
@@ -477,12 +482,13 @@ func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string 
 
 	if len(action.Args) == 1 { // new smart index
 		// generate contract account based on the initial tx
-		txHash, err := hex.DecodeString(utils.SHA256(txSerialized))
+		publicKey, err := hex.DecodeString(tx.Signer)
+		hash, err := hex.DecodeString(utils.SHA256(append(actionSerialized, publicKey...)))
 		if err != nil {
 			panic(err)
 		}
 
-		smartIndexAddress, err = bech32.EncodeFromBase256("idx", txHash)
+		smartIndexAddress, err = bech32.EncodeFromBase256("idx", hash)
 		if err != nil {
 			panic(err)
 		}
@@ -490,9 +496,10 @@ func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string 
 		// maximum length is 64, trimmed this to 32 chars
 		smartIndexAddress = smartIndexAddress[:32]
 
+		// TODO: change this to query, exec to prevent sqli
 		q = fmt.Sprintf(`
 				INSERT INTO smart_index (smart_index_address, owner_address, wasm_blob)
-				VALUES ('%s', '%s', x'%s');`, smartIndexAddress, tx.Signer, wasmBytes,
+				VALUES ('%s', '%s', X'%s');`, smartIndexAddress, tx.Signer, wasmBytes,
 		)
 	} else { // redeploy
 		smartIndexAddress = action.Args[1]
@@ -504,8 +511,38 @@ func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string 
 	_, err = c.Store.Instance.Exec(q)
 	if err != nil {
 		// TODO: handle error here, do not panic
-		// log.Panicln(err)
+		fmt.Println(err)
 	}
 
 	return smartIndexAddress
+}
+
+func (c *Chain) GetSmartIndexWasm(smartIndexAddress string) []byte {
+	var wasmBlob []byte
+	wasmBlobRaw := c.Store.Instance.QueryRow("SELECT wasm_blob FROM smart_index WHERE smart_index_address = ?", smartIndexAddress)
+	wasmBlobRaw.Scan(&wasmBlob)
+
+	return wasmBlob
+}
+
+func (c *Chain) GetTransaction(txId string) map[string]interface{} {
+
+	var blockId string
+	var signer string
+	var receiver string
+	var actions string
+	var createdAt int64
+
+	selectRaw := c.Store.Instance.QueryRow("SELECT block_id, signer, receiver, actions, created_at FROM transactions WHERE id = ?", txId)
+	selectRaw.Scan(&blockId, &signer, &receiver, &actions, &createdAt)
+
+	res := map[string]interface{}{
+		"block_id":   blockId,
+		"signer":     signer,
+		"receiver":   receiver,
+		"actions":    actions,
+		"created_at": createdAt,
+	}
+
+	return res
 }

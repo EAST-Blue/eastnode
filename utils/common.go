@@ -63,3 +63,14 @@ func DecodeHexAndBorshDeserialize(target interface{}, s string) []byte {
 
 	return bytes
 }
+
+func BorshSerializeAndEncodeHex(target interface{}) string {
+	res, err := borsh.Serialize(target)
+	if err != nil {
+		panic(err)
+	}
+
+	str := hex.EncodeToString(res)
+
+	return str
+}
