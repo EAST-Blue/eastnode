@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"eastnode/indexer/repository"
 	"eastnode/runtime"
 	"eastnode/types"
 	"eastnode/utils"
@@ -37,7 +38,9 @@ func (c *Chain) Init() *Chain {
 	c.Mempool = new(Mempool)
 	c.Mempool.Init(c.Store.KV)
 
-	c.WasmRuntime = &runtime.WasmRuntime{Store: *store.GetInstance(store.SmartIndexDB)}
+	indexerInstance := store.GetInstance(store.IndexerDB)
+	indexerRepo := repository.NewIndexerRepository(indexerInstance.Gorm)
+	c.WasmRuntime = &runtime.WasmRuntime{Store: *store.GetInstance(store.SmartIndexDB), IndexerRepo: indexerRepo}
 
 	log.Println("[+] chain initialized")
 

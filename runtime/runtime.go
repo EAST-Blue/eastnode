@@ -3,6 +3,7 @@ package runtime
 import (
 	"bytes"
 	"context"
+	"eastnode/indexer/repository"
 	"eastnode/types"
 	store "eastnode/utils/store"
 	"encoding/binary"
@@ -28,8 +29,9 @@ const (
 type Address string
 
 type WasmRuntime struct {
-	Store store.Store
-	Mod   api.Module
+	Store       store.Store
+	Mod         api.Module
+	IndexerRepo *repository.IndexerRepository
 }
 
 // ref: https://github.com/RPG-18/wasmer-go-assemblyscript/blob/main/assemblyscript/go.ts
@@ -165,17 +167,9 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		Export("selectItem").
 		NewFunctionBuilder().
 		WithFunc(func(height int64) uint32 {
-			// TODO: Remove mocked data
-			result := types.BitcoinBlockHeader{
-				ID:            1,
-				Version:       1,
-				Height:        0,
-				PreviousBlock: "0000000000000000000000000000000000000000000000000000000000000000",
-				MerkleRoot:    "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b",
-				Hash:          "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
-				Time:          1231006505000,
-				Nonce:         2083236893,
-				Bits:          486604799,
+			result, err := r.IndexerRepo.GetBlockByHeight(height)
+			if err != nil {
+				panic(err)
 			}
 
 			serializedResult, _ := json.Marshal(result)
@@ -186,19 +180,11 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("getBlockByHeight").
 		NewFunctionBuilder().
-		WithFunc(func(block_hash int32) uint32 {
-			// ^ the block_hash above is ptr for string
-			// TODO: Remove mocked data
-			result := []types.BitcoinTransaction{{
-
-				ID:        1,
-				Hash:      "3a6d490a7cf40819cdd826729d921ad5ab4b8347dfbec81179dd09aba0d25b37",
-				BlockHash: "000000009a940db389f3a7cbb8405f4ec14342bed36073b60ee63ed7e117f193",
-				BlockId:   189,
-				LockTime:  0,
-				Version:   1,
-				Safe:      0,
-			}}
+		WithFunc(func(blockHash string) uint32 {
+			result, err := r.IndexerRepo.GetTransactionsByBlockHash(blockHash)
+			if err != nil {
+				panic(err)
+			}
 
 			serializedResult, _ := json.Marshal(result)
 
@@ -208,26 +194,11 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("getTransactionsByBlockHash").
 		NewFunctionBuilder().
-		WithFunc(func(tx_hash int32) uint32 {
-			// ^ the tx_hash above is ptr for string
-			// TODO: Remove mocked data
-			result := []types.BitcoinOutpoint{{
-				ID:              1,
-				Value:           5000000000,
-				SpendingTxId:    0,
-				SpendingTxHash:  "",
-				SpendingTxIndex: 0,
-				Sequence:        0,
-				FundingTxId:     194,
-				FundingTxHash:   "3a6d490a7cf40819cdd826729d921ad5ab4b8347dfbec81179dd09aba0d25b37",
-				FundingTxIndex:  0,
-				SignatureScript: "",
-				PkScript:        "410449fff9665bfda43017a27b3d32e986378befdd6fa5d4eb097626701ace807a2b3a43e74375dce4ed9028b3b62ba8485358cd48967e854a857a38ecdbfe5b62f8ac",
-				Witness:         "",
-				Spender:         "",
-				Type:            "nonstandard",
-			}}
-
+		WithFunc(func(transactionHash string) uint32 {
+			result, err := r.IndexerRepo.GetOutpointsByTransactionHash(transactionHash)
+			if err != nil {
+				panic(err)
+			}
 			serializedResult, _ := json.Marshal(result)
 
 			ptr := r.writeString(r.Mod.Memory(), string(serializedResult))

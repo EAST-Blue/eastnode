@@ -3,20 +3,31 @@ module eastnode
 go 1.22.4
 
 require (
+	github.com/btcsuite/btcd v0.24.0
 	github.com/btcsuite/btcd/btcec/v2 v2.3.3
+	github.com/btcsuite/btcd/btcutil v1.1.5
+	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0
 	github.com/cbergoon/merkletree v0.2.0
 	github.com/dolthub/driver v0.1.3
 	github.com/dustinxie/ecc v0.0.0-20210511000915-959544187564
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/rpc v1.2.1
+	github.com/libsv/go-bt/v2 v2.2.5
 	github.com/near/borsh-go v0.3.1
 	go.etcd.io/bbolt v1.3.10
+	gorm.io/driver/mysql v1.5.6
+	gorm.io/gorm v1.25.10
 )
 
 require (
-	github.com/btcsuite/btcd v0.24.0 // indirect
-	github.com/btcsuite/btcd/btcutil v1.1.5 // indirect
-	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0 // indirect
+	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f // indirect
+	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/decred/dcrd/crypto/blake256 v1.0.1 // indirect
+	github.com/decred/dcrd/lru v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/libsv/go-bk v0.1.6 // indirect
+	github.com/rogpeppe/go-internal v1.9.0 // indirect
 )
 
 require (
@@ -33,10 +44,9 @@ require (
 	github.com/apache/thrift v0.20.0 // indirect
 	github.com/aws/aws-sdk-go v1.53.19 // indirect
 	github.com/bcicen/jstream v1.0.1 // indirect
-	github.com/boltdb/bolt v1.3.1
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
 	github.com/denisbrodbeck/machineid v1.0.1 // indirect
 	github.com/dolthub/dolt/go v0.40.5-0.20240608004931-f76dfd6d17bf // indirect
 	github.com/dolthub/dolt/go/gen/proto/dolt/services/eventsapi v0.0.0-20240608004931-f76dfd6d17bf // indirect
@@ -68,7 +78,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.12.4 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
-	github.com/iancoleman/strcase v0.3.0 // indirect
+	github.com/iancoleman/strcase v0.3.0
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
@@ -76,14 +86,13 @@ require (
 	github.com/kch42/buzhash v0.0.0-20160816060738-9bdec3dec7c6 // indirect
 	github.com/klauspost/compress v1.17.8 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
-	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lestrrat-go/strftime v1.0.6 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
-	github.com/ompluscator/dynamic-struct v1.4.0 // indirect
+	github.com/ompluscator/dynamic-struct v1.4.0
 	github.com/oracle/oci-go-sdk/v65 v65.67.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -95,11 +104,11 @@ require (
 	github.com/silvasur/buzhash v0.0.0-20160816060738-9bdec3dec7c6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/sony/gobreaker v1.0.0 // indirect
-	github.com/tetratelabs/wazero v1.7.2 // indirect
+	github.com/tetratelabs/wazero v1.7.2
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
-	github.com/uptrace/bun v1.2.1 // indirect
-	github.com/uptrace/bun/dialect/mysqldialect v1.2.1 // indirect
-	github.com/uptrace/bun/extra/bundebug v1.2.1 // indirect
+	github.com/uptrace/bun v1.2.1
+	github.com/uptrace/bun/dialect/mysqldialect v1.2.1
+	github.com/uptrace/bun/extra/bundebug v1.2.1
 	github.com/vbauerster/mpb/v8 v8.7.3 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect

@@ -4,10 +4,9 @@ import (
 	"crypto"
 	"encoding/binary"
 	"encoding/hex"
+	"github.com/near/borsh-go"
 	"log"
 	"os"
-
-	"github.com/near/borsh-go"
 )
 
 func Itob(v uint64) []byte {
