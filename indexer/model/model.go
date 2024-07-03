@@ -7,8 +7,8 @@ import (
 )
 
 type P2shAsmScripts struct {
-	LockScripts   []string
-	UnlockScripts []string
+	LockScripts   []string `json:"lock_scripts"`
+	UnlockScripts []string `json:"unlock_scripts"`
 }
 
 type Block struct {

@@ -38,6 +38,7 @@ func NewPeer(url string, str Storage) (*Peer, error) {
 			OnInv: func(p *peer.Peer, msg *wire.MsgInv) {
 				sendMsg := wire.NewMsgGetData()
 				for _, inv := range msg.InvList {
+					inv.Type = wire.InvTypeWitnessBlock
 					err := sendMsg.AddInvVect(inv)
 					if err != nil {
 						panic(err)

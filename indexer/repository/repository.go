@@ -105,42 +105,39 @@ func (i *IndexerRepository) GetOutpointsByTransactionHash(transactionHash string
 		return nil, resp.Error
 	}
 
-	// TODO: handle this error
+	// TODO: handle these errors
 	for i, v := range outpoints {
 		if v.Type == "scripthash" && v.SignatureScript != "" {
 			scripts, err := ParseP2shSigHexToAsms(v.SignatureScript)
-			if err != nil {
-				continue
+			if err == nil {
+				outpoints[i].P2shAsmScripts = scripts
 			}
-			outpoints[i].P2shAsmScripts = scripts
 		}
 
 		if v.PkScript != "" {
 			bs, err := bscript.NewFromHexString(v.PkScript)
-			if err != nil {
-				continue
+			if err == nil {
+				asm, err := bs.ToASM()
+				if err == nil {
+					scripts := strings.Split(asm, " ")
+					outpoints[i].PkAsmScripts = &scripts
+				}
 			}
 
-			asm, err := bs.ToASM()
-			if err != nil {
-				continue
-			}
-			scripts := strings.Split(asm, " ")
-			outpoints[i].PkAsmScripts = &scripts
 		}
 
 		if v.Witness != "" {
-			bs, err := bscript.NewFromHexString(v.Witness)
-			if err != nil {
-				continue
+			witnesses := strings.Split(v.Witness, ",")
+			if len(witnesses) == 3 {
+				bs, err := bscript.NewFromHexString(witnesses[1])
+				if err == nil {
+					asm, err := bs.ToASM()
+					if err == nil {
+						scripts := strings.Split(asm, " ")
+						outpoints[i].WitnessAsmScripts = &scripts
+					}
+				}
 			}
-
-			asm, err := bs.ToASM()
-			if err != nil {
-				continue
-			}
-			scripts := strings.Split(asm, " ")
-			outpoints[i].WitnessAsmScripts = &scripts
 		}
 	}
 
