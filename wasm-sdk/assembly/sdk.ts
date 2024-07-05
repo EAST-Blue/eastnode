@@ -9,6 +9,7 @@ import {
   selectItems,
   updateItem,
 } from "./env";
+import { Value } from "assemblyscript-json/assembly/JSON";
 
 export class Table {
   public name: string;
@@ -65,6 +66,10 @@ export class UTXO {
   witness: string;
   spender: string;
   type: string;
+  p2shAsmScripts: string[];
+  pkAsmScripts: string[];
+  witnessAsmScripts: string[];
+
 
   constructor(
     id: string,
@@ -80,7 +85,10 @@ export class UTXO {
     pkScript: string,
     witness: string,
     spender: string,
-    type: string
+    type: string,
+    p2shAsmScripts: string,
+    pkAsmScripts: string,
+    witnessAsmScripts: string
   ) {
     this.id = u64(parseInt(id));
     this.value = u64(parseInt(value));
@@ -96,6 +104,9 @@ export class UTXO {
     this.witness = witness;
     this.spender = spender;
     this.type = type;
+    this.p2shAsmScripts = p2shAsmScripts.split(";");
+    this.pkAsmScripts = pkAsmScripts.split(";");
+    this.witnessAsmScripts = witnessAsmScripts.split(";");
   }
 }
 
@@ -132,11 +143,17 @@ export function getResultFromJson(
       let value: i64 = valueOrNull.valueOf();
       return value.toString();
     }
-  } else {
+  } else if (type === "string") {
     let valueOrNull: JSON.Str | null = jsonObj.getString(fieldName);
     if (valueOrNull != null) {
       let value: string = valueOrNull.valueOf();
       return value;
+    }
+  } else if (type === "array") {
+    let valueOrNull: JSON.Arr | null = jsonObj.getArr(fieldName);
+    if (valueOrNull != null) {
+      let value: Value[] = valueOrNull.valueOf();
+      return value.join(";")
     }
   }
 
@@ -207,7 +224,7 @@ export function getTxUTXOByBlockHeight(block_height: u64): UTXO[] {
     if (jsonObj.isObj) {
       const txHash = getResultFromJson(
         jsonObj as JSON.Obj,
-        "block_hash",
+        "hash",
         "string"
       );
       txHashes.push(txHash);
@@ -229,7 +246,7 @@ export function getTxUTXOByBlockHeight(block_height: u64): UTXO[] {
           new UTXO(
             getResultFromJson(jsonObj as JSON.Obj, "id", "int64"),
             getResultFromJson(jsonObj as JSON.Obj, "value", "int64"),
-            getResultFromJson(jsonObj as JSON.Obj, "spending_tx_id", "string"),
+            getResultFromJson(jsonObj as JSON.Obj, "spending_tx_id", "int64"),
             getResultFromJson(
               jsonObj as JSON.Obj,
               "spending_tx_hash",
@@ -238,15 +255,15 @@ export function getTxUTXOByBlockHeight(block_height: u64): UTXO[] {
             getResultFromJson(
               jsonObj as JSON.Obj,
               "spending_tx_index",
-              "string"
+              "int64"
             ),
             getResultFromJson(jsonObj as JSON.Obj, "sequence", "int64"),
-            getResultFromJson(jsonObj as JSON.Obj, "funding_tx_id", "string"),
+            getResultFromJson(jsonObj as JSON.Obj, "funding_tx_id", "int64"),
             getResultFromJson(jsonObj as JSON.Obj, "funding_tx_hash", "string"),
             getResultFromJson(
               jsonObj as JSON.Obj,
               "funding_tx_index",
-              "string"
+              "int64"
             ),
             getResultFromJson(
               jsonObj as JSON.Obj,
@@ -256,7 +273,10 @@ export function getTxUTXOByBlockHeight(block_height: u64): UTXO[] {
             getResultFromJson(jsonObj as JSON.Obj, "pk_script", "string"),
             getResultFromJson(jsonObj as JSON.Obj, "witness", "string"),
             getResultFromJson(jsonObj as JSON.Obj, "spender", "string"),
-            getResultFromJson(jsonObj as JSON.Obj, "type", "string")
+            getResultFromJson(jsonObj as JSON.Obj, "type", "string"),
+            getResultFromJson(jsonObj as JSON.Obj, "p2sh_asm_scripts", "array"),
+            getResultFromJson(jsonObj as JSON.Obj, "pk_asm_scripts", "array"),
+            getResultFromJson(jsonObj as JSON.Obj, "witness_asm_scripts", "array")
           )
         );
       }

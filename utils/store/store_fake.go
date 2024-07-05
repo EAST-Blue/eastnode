@@ -2,11 +2,14 @@ package utils
 
 import (
 	"database/sql"
+	"eastnode/indexer/model"
 	"eastnode/utils"
 	"log"
 	"os"
 
 	bolt "go.etcd.io/bbolt"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 func GetFakeInstance(instanceType InstanceType) *Store {
@@ -28,6 +31,29 @@ func GetFakeInstance(instanceType InstanceType) *Store {
 		if instanceType == SmartIndexDB {
 			sSmartIndex = &Store{Instance: doltInstance}
 			sSmartIndex.InitWasmDB()
+
+			if _, err := os.Stat(utils.Cwd() + "/db_test/indexer"); os.IsNotExist(err) {
+				dump, _ := os.ReadFile("../utils/store/test/doltdump.sql")
+				_, err = sSmartIndex.Instance.Exec("CREATE DATABASE indexer")
+				if err != nil {
+					panic(err)
+				}
+
+				_, err = sSmartIndex.Instance.Exec(string(dump))
+				if err != nil {
+					panic(err)
+				}
+			}
+
+			db, err := model.NewDB(mysql.New(mysql.Config{
+				DriverName: "dolt",
+				DSN:        "file://" + utils.Cwd() + "/db_test?commitname=root&commitemail=root@east&multistatements=true&database=indexer",
+			}), &gorm.Config{})
+			if err != nil {
+				panic(err)
+			}
+
+			sSmartIndex.Gorm = db
 			return sSmartIndex
 		} else {
 			sChain = &Store{Instance: doltInstance}

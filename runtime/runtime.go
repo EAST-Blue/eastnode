@@ -180,8 +180,9 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("getBlockByHeight").
 		NewFunctionBuilder().
-		WithFunc(func(blockHash string) uint32 {
-			result, err := r.IndexerRepo.GetTransactionsByBlockHash(blockHash)
+		WithFunc(func(blockHash int32) uint32 {
+			blockHashStr := ToString(r.Mod.Memory(), int64(blockHash))
+			result, err := r.IndexerRepo.GetTransactionsByBlockHash(blockHashStr)
 			if err != nil {
 				panic(err)
 			}
@@ -194,8 +195,9 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("getTransactionsByBlockHash").
 		NewFunctionBuilder().
-		WithFunc(func(transactionHash string) uint32 {
-			result, err := r.IndexerRepo.GetOutpointsByTransactionHash(transactionHash)
+		WithFunc(func(transactionHash int32) uint32 {
+			transactionHashStr := ToString(r.Mod.Memory(), int64(transactionHash))
+			result, err := r.IndexerRepo.GetOutpointsByTransactionHash(transactionHashStr)
 			if err != nil {
 				panic(err)
 			}
@@ -208,7 +210,6 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		Export("getOutpointsByTransactionHash").
 		NewFunctionBuilder().
 		WithFunc(func(strPtr int32) {
-			// DEBUG
 			str := ToString(r.Mod.Memory(), int64(strPtr))
 
 			*output = str
@@ -216,7 +217,6 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		Export("valueReturn").
 		NewFunctionBuilder().
 		WithFunc(func(strPtr int32) {
-			// DEBUG
 			str := ToString(r.Mod.Memory(), int64(strPtr))
 
 			log.Panicln(str)
@@ -224,7 +224,6 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		Export("panic").
 		NewFunctionBuilder().
 		WithFunc(func(strPtr int32) {
-			// DEBUG
 			str := ToString(r.Mod.Memory(), int64(strPtr))
 
 			fmt.Println("consoleLog", str)
@@ -232,7 +231,6 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		Export("consoleLog")
 
 	assemblyscript.NewFunctionExporter().
-		WithAbortMessageDisabled().
 		ExportFunctions(envBuilder)
 
 	_, err := envBuilder.Instantiate(ctx)

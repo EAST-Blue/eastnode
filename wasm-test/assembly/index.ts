@@ -16,7 +16,6 @@ import {
 } from "east-wasm-sdk/assembly";
 export { allocate } from "east-wasm-sdk/assembly/external";
 
-
 const ordinalsTable = new Table("ordinals", [
   new Column("id", "int64"),
   new Column("address", "string"),
@@ -67,7 +66,10 @@ export function index(block_height_ptr: i32): void {
   const utxos = getTxUTXOByBlockHeight(block_height);
 
   for (let i = 0; i < utxos.length; i++) {
-    consoleLog(utxos[i].fundingTxHash);
+    consoleLog("fundingTxHash: " + utxos[i].fundingTxHash);
+    consoleLog("p2shAsmScripts: " + utxos[i].p2shAsmScripts.join(" "));
+    consoleLog("pkAsmScripts: " + utxos[i].pkAsmScripts.join(" "));
+    consoleLog("witnessAsmScripts: " + utxos[i].witnessAsmScripts.join(" "));
   }
 }
 
