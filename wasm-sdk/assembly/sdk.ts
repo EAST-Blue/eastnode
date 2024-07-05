@@ -24,7 +24,7 @@ export class Table {
     create(this.name, primaryKey, this.schema);
   }
 
-  public select(whereCondition: TableSchema): string {
+  public select(whereCondition: TableSchema): JSON.Obj {
     return selectRow(this.name, whereCondition);
   }
 
@@ -37,7 +37,7 @@ export class Table {
   }
 
   public delete(whereCondition: TableSchema): void {
-    deleteRows(this.name, whereCondition)
+    deleteRows(this.name, whereCondition);
   }
 }
 
@@ -69,7 +69,6 @@ export class UTXO {
   p2shAsmScripts: string[];
   pkAsmScripts: string[];
   witnessAsmScripts: string[];
-
 
   constructor(
     id: string,
@@ -153,7 +152,7 @@ export function getResultFromJson(
     let valueOrNull: JSON.Arr | null = jsonObj.getArr(fieldName);
     if (valueOrNull != null) {
       let value: Value[] = valueOrNull.valueOf();
-      return value.join(";")
+      return value.join(";");
     }
   }
 
@@ -178,9 +177,9 @@ export function create(
 export function selectRow(
   tableName: string,
   whereCondition: TableSchema
-): string {
+): JSON.Obj {
   const ptr = selectItems(tableName, toStringSchema(whereCondition));
-  const result = ptrToString(ptr);
+  const result = toJson(ptrToString(ptr));
 
   return result;
 }
@@ -204,6 +203,43 @@ export function deleteRows(
   deleteItem(tableName, toStringSchema(whereCondition));
 }
 
+export function getUTXOByTransactionHash(hash: string): UTXO[] {
+  const utxosPtr = getOutpointsByTransactionHash(hash);
+  const utxosStr = ptrToString(utxosPtr);
+  const jsonUTXOs = toJsonArray(utxosStr);
+  const UTXOs: UTXO[] = [];
+
+  for (let i = 0; i < jsonUTXOs.valueOf().length; i++) {
+    const jsonObj = jsonUTXOs.valueOf()[i];
+
+    if (jsonObj.isObj) {
+      UTXOs.push(
+        new UTXO(
+          getResultFromJson(jsonObj as JSON.Obj, "id", "int64"),
+          getResultFromJson(jsonObj as JSON.Obj, "value", "int64"),
+          getResultFromJson(jsonObj as JSON.Obj, "spending_tx_id", "int64"),
+          getResultFromJson(jsonObj as JSON.Obj, "spending_tx_hash", "string"),
+          getResultFromJson(jsonObj as JSON.Obj, "spending_tx_index", "int64"),
+          getResultFromJson(jsonObj as JSON.Obj, "sequence", "int64"),
+          getResultFromJson(jsonObj as JSON.Obj, "funding_tx_id", "int64"),
+          getResultFromJson(jsonObj as JSON.Obj, "funding_tx_hash", "string"),
+          getResultFromJson(jsonObj as JSON.Obj, "funding_tx_index", "int64"),
+          getResultFromJson(jsonObj as JSON.Obj, "signature_script", "string"),
+          getResultFromJson(jsonObj as JSON.Obj, "pk_script", "string"),
+          getResultFromJson(jsonObj as JSON.Obj, "witness", "string"),
+          getResultFromJson(jsonObj as JSON.Obj, "spender", "string"),
+          getResultFromJson(jsonObj as JSON.Obj, "type", "string"),
+          getResultFromJson(jsonObj as JSON.Obj, "p2sh_asm_scripts", "array"),
+          getResultFromJson(jsonObj as JSON.Obj, "pk_asm_scripts", "array"),
+          getResultFromJson(jsonObj as JSON.Obj, "witness_asm_scripts", "array")
+        )
+      );
+    }
+  }
+
+  return UTXOs;
+}
+
 export function getTxUTXOByBlockHeight(block_height: u64): UTXO[] {
   // Get Block
   const ptr = getBlockByHeight(block_height);
@@ -222,65 +258,16 @@ export function getTxUTXOByBlockHeight(block_height: u64): UTXO[] {
     const jsonObj = jsonResultTxHashes.valueOf()[i];
 
     if (jsonObj.isObj) {
-      const txHash = getResultFromJson(
-        jsonObj as JSON.Obj,
-        "hash",
-        "string"
-      );
+      const txHash = getResultFromJson(jsonObj as JSON.Obj, "hash", "string");
       txHashes.push(txHash);
     }
   }
 
   // Get UTXOs
-  const UTXOs: UTXO[] = [];
+  let UTXOs: UTXO[] = [];
   for (let i = 0; i < txHashes.length; i++) {
-    const utxosPtr = getOutpointsByTransactionHash(txHashes[i]);
-    const utxosStr = ptrToString(utxosPtr);
-    const jsonResultUtxos = toJsonArray(utxosStr);
-
-    for (let i = 0; i < jsonResultUtxos.valueOf().length; i++) {
-      const jsonObj = jsonResultUtxos.valueOf()[i];
-
-      if (jsonObj.isObj) {
-        UTXOs.push(
-          new UTXO(
-            getResultFromJson(jsonObj as JSON.Obj, "id", "int64"),
-            getResultFromJson(jsonObj as JSON.Obj, "value", "int64"),
-            getResultFromJson(jsonObj as JSON.Obj, "spending_tx_id", "int64"),
-            getResultFromJson(
-              jsonObj as JSON.Obj,
-              "spending_tx_hash",
-              "string"
-            ),
-            getResultFromJson(
-              jsonObj as JSON.Obj,
-              "spending_tx_index",
-              "int64"
-            ),
-            getResultFromJson(jsonObj as JSON.Obj, "sequence", "int64"),
-            getResultFromJson(jsonObj as JSON.Obj, "funding_tx_id", "int64"),
-            getResultFromJson(jsonObj as JSON.Obj, "funding_tx_hash", "string"),
-            getResultFromJson(
-              jsonObj as JSON.Obj,
-              "funding_tx_index",
-              "int64"
-            ),
-            getResultFromJson(
-              jsonObj as JSON.Obj,
-              "signature_script",
-              "string"
-            ),
-            getResultFromJson(jsonObj as JSON.Obj, "pk_script", "string"),
-            getResultFromJson(jsonObj as JSON.Obj, "witness", "string"),
-            getResultFromJson(jsonObj as JSON.Obj, "spender", "string"),
-            getResultFromJson(jsonObj as JSON.Obj, "type", "string"),
-            getResultFromJson(jsonObj as JSON.Obj, "p2sh_asm_scripts", "array"),
-            getResultFromJson(jsonObj as JSON.Obj, "pk_asm_scripts", "array"),
-            getResultFromJson(jsonObj as JSON.Obj, "witness_asm_scripts", "array")
-          )
-        );
-      }
-    }
+    const jsonResultUtxos = getUTXOByTransactionHash(txHashes[i]);
+    UTXOs = UTXOs.concat(jsonResultUtxos);
   }
   return UTXOs;
 }
