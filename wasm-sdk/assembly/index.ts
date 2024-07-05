@@ -14,6 +14,7 @@ import {
   updateRows,
   deleteRows,
   getTxUTXOByBlockHeight,
+  getUTXOByTransactionHash
 } from "./sdk";
 export {
   consoleLog,
@@ -32,4 +33,5 @@ export {
   updateRows,
   deleteRows,
   getTxUTXOByBlockHeight,
+  getUTXOByTransactionHash
 };

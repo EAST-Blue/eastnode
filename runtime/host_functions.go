@@ -85,6 +85,10 @@ func Select(s store.Store, contractAddress string, tableName string, whereCondit
 
 	result := s.Select(fmt.Sprintf("%s%s%s", contractAddress, ContractTableSeparator, tableName), whereConditionMap)
 
+	if result == "not-found" {
+		return `{"error":"not-found"}`
+	}
+
 	resultMarshalled, err := json.Marshal(result)
 	if err != nil {
 		log.Panicln(err)

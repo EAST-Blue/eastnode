@@ -100,7 +100,8 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 			CreateTable(r.Store, smartIndexAddress, tableNameStr, primaryKeyStr, tableSchemaStr)
 
 			// WORKAROUND: showTables()
-			r.Store.ShowTables()
+			r.Store.ShowTables(true)
+
 			return 0
 		}).
 		Export("createTable").
@@ -114,9 +115,9 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 			valuesStr := ToString(r.Mod.Memory(), int64(values))
 
 			Insert(r.Store, smartIndexAddress, tableNameStr, valuesStr)
-
 			// WORKAROUND: showTables()
-			r.Store.ShowTables()
+			r.Store.ShowTables(true)
+
 			return 0
 		}).
 		Export("insertItem").
@@ -131,9 +132,9 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 			valuesStr := ToString(r.Mod.Memory(), int64(values))
 
 			Update(r.Store, smartIndexAddress, tableNameStr, whereConditionStr, valuesStr)
-
 			// WORKAROUND: showTables()
-			r.Store.ShowTables()
+			r.Store.ShowTables(true)
+
 			return 0
 		}).
 		Export("updateItem").
@@ -147,9 +148,9 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 			whereConditionStr := ToString(r.Mod.Memory(), int64(whereCondition))
 
 			Delete(r.Store, smartIndexAddress, tableNameStr, whereConditionStr)
-
 			// WORKAROUND: showTables()
-			r.Store.ShowTables()
+			r.Store.ShowTables(true)
+
 			return 0
 		}).
 		Export("deleteItem").
@@ -171,7 +172,6 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 			if err != nil {
 				panic(err)
 			}
-
 			serializedResult, _ := json.Marshal(result)
 
 			ptr := r.writeString(r.Mod.Memory(), string(serializedResult))

@@ -58,7 +58,7 @@ func (s *Store) Update(model interface{}, tableName string, whereCondition map[s
 		if len(whereConditionStr) > 1 {
 			whereConditionStr = whereConditionStr + " and"
 		}
-		whereConditionStr = whereConditionStr + fmt.Sprintf("%s = %s", k, v)
+		whereConditionStr = whereConditionStr + fmt.Sprintf("%s = \"%s\"", k, v)
 	}
 
 	if res, err := s.
@@ -82,7 +82,7 @@ func (s *Store) Delete(tableName string, whereCondition map[string]interface{}) 
 		if len(whereConditionStr) > 1 {
 			whereConditionStr = whereConditionStr + " and"
 		}
-		whereConditionStr = whereConditionStr + fmt.Sprintf("%s = %s", k, v)
+		whereConditionStr = whereConditionStr + fmt.Sprintf("%s = \"%s\"", k, v)
 	}
 
 	if res, err := s.
@@ -105,7 +105,7 @@ func (s *Store) Select(tableName string, whereCondition map[string]interface{}) 
 		if len(whereConditionStr) > 1 {
 			whereConditionStr = whereConditionStr + " and"
 		}
-		whereConditionStr = whereConditionStr + fmt.Sprintf("%s = %s", k, v)
+		whereConditionStr = whereConditionStr + fmt.Sprintf("%s = \"%s\"", k, v)
 	}
 
 	var result map[string]interface{}
@@ -118,14 +118,14 @@ func (s *Store) Select(tableName string, whereCondition map[string]interface{}) 
 		Where(whereConditionStr).
 		Limit(1).
 		ScanAndCount(ctx); err != nil {
-		log.Panicln(err)
+		return "not-found"
 	} else {
 		fmt.Println("[+] Select : ", count, result)
 	}
 	return result
 }
 
-func (s *Store) ShowTables() {
+func (s *Store) ShowTables(noPrint bool) {
 	res, err := s.Instance.Query("show tables")
 
 	if err != nil {
@@ -137,7 +137,10 @@ func (s *Store) ShowTables() {
 
 	for res.Next() {
 		res.Scan(&str)
-		fmt.Println(str)
+		if !noPrint {
+			fmt.Println(str)
+
+		}
 	}
 
 }
