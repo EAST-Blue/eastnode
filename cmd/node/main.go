@@ -1,10 +1,15 @@
 package main
 
 import (
-	"eastnode/chain"
+	"eastnode/indexer/peer"
 	"eastnode/indexer/repository"
+	"eastnode/indexer/store"
+	storeDB "eastnode/utils/store"
+
+	"github.com/btcsuite/btcd/chaincfg"
+
+	"eastnode/chain"
 	"eastnode/jsonrpc"
-	store "eastnode/utils/store"
 	"log"
 	"net/http"
 
@@ -15,9 +20,23 @@ import (
 )
 
 func main() {
-	indexerInstance := store.GetInstance(store.IndexerDB)
-	indexerRepo := repository.NewIndexerRepository(indexerInstance.Gorm)
+	// indexer
+	s := storeDB.GetInstance(storeDB.IndexerDB)
+	str := store.NewStorage(&chaincfg.RegressionNetParams, s.Gorm)
+	p, err := peer.NewPeer("localhost:18444", str)
+	if err != nil {
+		panic(err)
+	}
 
+	go func() {
+		err = p.Run()
+		if err != nil {
+			panic(err)
+		}
+	}()
+	indexerRepo := repository.NewIndexerRepository(s.Gorm)
+
+	// rpc
 	blockchain := new(chain.Chain)
 	bc := blockchain.Init(indexerRepo)
 
@@ -40,5 +59,8 @@ func main() {
 	router.Handle("/", rpcServer)
 
 	log.Println("rpc is running")
-	http.ListenAndServe(":8080", router)
+	err = http.ListenAndServe(":4000", router)
+	if err != nil {
+		panic(err)
+	}
 }
