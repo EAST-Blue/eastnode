@@ -32,14 +32,12 @@ type Chain struct {
 	WasmRuntime *runtime.WasmRuntime
 }
 
-func (c *Chain) Init() *Chain {
+func (c *Chain) Init(indexerRepo *repository.IndexerRepository) *Chain {
 	c.Store = store.GetInstance(store.ChainDB)
 
 	c.Mempool = new(Mempool)
 	c.Mempool.Init(c.Store.KV)
 
-	indexerInstance := store.GetInstance(store.IndexerDB)
-	indexerRepo := repository.NewIndexerRepository(indexerInstance.Gorm)
 	c.WasmRuntime = &runtime.WasmRuntime{Store: *store.GetInstance(store.SmartIndexDB), IndexerRepo: indexerRepo}
 
 	log.Println("[+] chain initialized")
