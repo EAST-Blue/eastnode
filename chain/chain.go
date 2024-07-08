@@ -340,8 +340,6 @@ func (c *Chain) ProduceBlock() error {
 					txUnpacked.Actions = utils.BorshSerializeAndEncodeHex(parsedActions)
 				} else if action.Kind == "call" {
 					c.ProcessCall(txUnpacked, action)
-				} else if action.Kind == "view" {
-					// TODO: handle view function in the front, before going into produce block, so there'll be no view function here
 				}
 			}
 
