@@ -142,8 +142,11 @@ func TestProcessCall(t *testing.T) {
 	res.Next()
 	res.Scan(&str)
 
+	res.Next()
+	res.Scan(&str)
+
 	if !strings.Contains(str, fmt.Sprintf("%s_ordinals", SmartIndexAddress)) {
-		t.Error("Call failed")
+		t.Errorf("Call failed %s", str)
 	}
 }
 
