@@ -21,9 +21,7 @@ func (s *Store) InitIndexerDb() {
 	indexerDb, err := db.NewDB(mysql.New(mysql.Config{
 		DriverName: "dolt",
 		DSN:        "file://" + utils.Cwd() + "/db?commitname=root&commitemail=root@east&multistatements=true&database=indexer",
-	}), &gorm.Config{
-		// Logger: logger.Default.LogMode(logger.Silent),
-	})
+	}), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}
