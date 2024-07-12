@@ -1,7 +1,7 @@
 package runtime
 
 import (
-	"eastnode/indexer/repository"
+	indexerDb "eastnode/indexer/repository/db"
 	"eastnode/types"
 	utils "eastnode/utils/store"
 	"log"
@@ -11,8 +11,8 @@ import (
 
 func getWasmRuntime() *WasmRuntime {
 	instance := utils.GetFakeInstance(utils.SmartIndexDB)
-	indexerRepo := repository.NewIndexerRepository(instance.Gorm)
-	wr := &WasmRuntime{Store: *instance, IndexerRepo: indexerRepo}
+	indexerDbRepo := indexerDb.NewDBRepository(instance.Gorm)
+	wr := &WasmRuntime{Store: *instance, IndexerDbRepo: indexerDbRepo}
 
 	return wr
 }
