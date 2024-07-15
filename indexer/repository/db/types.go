@@ -18,6 +18,18 @@ type P2shAsmScripts struct {
 	UnlockScripts []string `json:"unlock_scripts"`
 }
 
+type UpdateOutpointSpendingData struct {
+	PreviousTxHash  string
+	PreviousTxIndex uint32
+
+	SpendingTxID    uint
+	SpendingTxHash  string
+	SpendingTxIndex uint32
+	Sequence        uint32
+	SignatureScript string
+	Witness         string
+}
+
 type Block struct {
 	gorm.Model
 
@@ -63,8 +75,8 @@ type OutPoint struct {
 	Witness         string `json:"witness"`
 
 	FundingTxID    uint   `json:"funding_tx_id"`
-	FundingTxHash  string `gorm:"index:idx_funding_tx_hash" json:"funding_tx_hash"`
-	FundingTxIndex uint32 `json:"funding_tx_index"`
+	FundingTxHash  string `gorm:"index:idx_funding_tx_hash;index:idx_funding_tx_hash_funding_tx_index,priority:1" json:"funding_tx_hash"`
+	FundingTxIndex uint32 `gorm:"index:idx_funding_tx_hash_funding_tx_index,priority:2" json:"funding_tx_index"`
 	PkScript       string `json:"pk_script"`
 	Value          int64  `json:"value"`
 	Spender        string `json:"spender"`

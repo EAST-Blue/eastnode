@@ -129,6 +129,18 @@ func (d *DBRepository) CreateOutpointWithTx(tx *gorm.DB, outpoint *OutPoint) err
 	return tx.Save(outpoint).Error
 }
 
+func (d *DBRepository) UpdateOutpointSpending(tx *gorm.DB, data *UpdateOutpointSpendingData) error {
+	res := tx.Where("`funding_tx_hash` = ? AND `funding_tx_index` = ?", data.PreviousTxHash, data.PreviousTxIndex).Model(OutPoint{}).Updates(map[string]interface{}{
+		"spending_tx_id":    data.SpendingTxID,
+		"spending_tx_hash":  data.SpendingTxHash,
+		"spending_tx_index": data.SpendingTxIndex,
+		"sequence":          data.Sequence,
+		"signature_script":  data.SignatureScript,
+		"witness":           data.Witness,
+	})
+	return res.Error
+}
+
 func (d *DBRepository) GetBlockByHeight(height int64) (*Block, error) {
 	block := &Block{}
 	if resp := d.Db.First(block, "height = ?", height); resp.Error != nil {

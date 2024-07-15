@@ -45,6 +45,8 @@ type GetBlock struct {
 		Locktime int    `json:"locktime"`
 		Vin      []struct {
 			Coinbase    string   `json:"coinbase"`
+			Txid        string   `json:"txid"`
+			Vout        int64    `json:"vout"`
 			Txinwitness []string `json:"txinwitness"`
 			Sequence    int64    `json:"sequence"`
 			ScriptSig   struct {
