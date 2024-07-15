@@ -39,7 +39,7 @@ func CreateTable(s store.Store, contractAddress string, tableName string, primar
 
 	newInstance := instance.Build().New()
 
-	s.CreateTable(newInstance, fmt.Sprintf("%s%s%s", contractAddress, ContractTableSeparator, tableName))
+	s.CreateTable(newInstance, getStateTableName(contractAddress, tableName))
 }
 
 func Insert(s store.Store, contractAddress string, tableName string, values string) {
@@ -48,7 +48,7 @@ func Insert(s store.Store, contractAddress string, tableName string, values stri
 		log.Panicln(err)
 	}
 
-	s.Insert(&ts, fmt.Sprintf("%s%s%s", contractAddress, ContractTableSeparator, tableName))
+	s.Insert(&ts, getStateTableName(contractAddress, tableName))
 }
 
 func Update(s store.Store, contractAddress string, tableName string, whereCondition string, values string) {
@@ -63,7 +63,7 @@ func Update(s store.Store, contractAddress string, tableName string, whereCondit
 		log.Panicln(err)
 	}
 
-	s.Update(&valuesMap, fmt.Sprintf("%s%s%s", contractAddress, ContractTableSeparator, tableName), whereConditionMap)
+	s.Update(&valuesMap, getStateTableName(contractAddress, tableName), whereConditionMap)
 }
 
 func Delete(s store.Store, contractAddress string, tableName string, whereCondition string) {
@@ -73,7 +73,7 @@ func Delete(s store.Store, contractAddress string, tableName string, whereCondit
 		log.Panicln(err)
 	}
 
-	s.Delete(fmt.Sprintf("%s%s%s", contractAddress, ContractTableSeparator, tableName), whereConditionMap)
+	s.Delete(getStateTableName(contractAddress, tableName), whereConditionMap)
 }
 
 func Select(s store.Store, contractAddress string, tableName string, whereCondition string) string {
@@ -83,7 +83,7 @@ func Select(s store.Store, contractAddress string, tableName string, whereCondit
 		log.Panicln(err)
 	}
 
-	result := s.Select(fmt.Sprintf("%s%s%s", contractAddress, ContractTableSeparator, tableName), whereConditionMap)
+	result := s.Select(getStateTableName(contractAddress, tableName), whereConditionMap)
 
 	if result == "not-found" {
 		return `{"error":"not-found"}`
@@ -97,6 +97,7 @@ func Select(s store.Store, contractAddress string, tableName string, whereCondit
 	return string(resultMarshalled)
 }
 
-// Host function to Bitcoin node
-// Get block id
-// Get transaction id
+func getStateTableName(contractAddress string, tableName string) string {
+	return fmt.Sprintf("%s%s%s", contractAddress, ContractTableSeparator, tableName)
+
+}
