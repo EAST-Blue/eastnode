@@ -1,14 +1,13 @@
 package utils
 
 import (
-	"eastnode/indexer/model"
+	"eastnode/indexer/repository/db"
 	"eastnode/utils"
 	"os"
 
 	_ "github.com/dolthub/driver"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	// "gorm.io/gorm/logger"
 )
 
 func (s *Store) InitIndexerDb() {
@@ -19,15 +18,13 @@ func (s *Store) InitIndexerDb() {
 		}
 	}
 
-	db, err := model.NewDB(mysql.New(mysql.Config{
+	indexerDb, err := db.NewDB(mysql.New(mysql.Config{
 		DriverName: "dolt",
 		DSN:        "file://" + utils.Cwd() + "/db?commitname=root&commitemail=root@east&multistatements=true&database=indexer",
-	}), &gorm.Config{
-		// Logger: logger.Default.LogMode(logger.Silent),
-	})
+	}), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}
 
-	s.Gorm = db
+	s.Gorm = indexerDb
 }

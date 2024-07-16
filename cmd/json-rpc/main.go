@@ -2,7 +2,7 @@ package main
 
 import (
 	"eastnode/chain"
-	"eastnode/indexer/repository"
+	indexerDb "eastnode/indexer/repository/db"
 	"eastnode/jsonrpc"
 	store "eastnode/utils/store"
 	"log"
@@ -15,11 +15,11 @@ import (
 )
 
 func main() {
-	indexerInstance := store.GetInstance(store.IndexerDB)
-	indexerRepo := repository.NewIndexerRepository(indexerInstance.Gorm)
+	indexerDbInstance := store.GetInstance(store.IndexerDB)
+	indexerDbRepo := indexerDb.NewDBRepository(indexerDbInstance.Gorm)
 
 	blockchain := new(chain.Chain)
-	bc := blockchain.Init(indexerRepo)
+	bc := blockchain.Init(indexerDbRepo)
 
 	rpcServer := rpc.NewServer()
 

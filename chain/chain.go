@@ -1,7 +1,7 @@
 package chain
 
 import (
-	"eastnode/indexer/repository"
+	indexerDb "eastnode/indexer/repository/db"
 	"eastnode/runtime"
 	"eastnode/types"
 	"eastnode/utils"
@@ -32,13 +32,13 @@ type Chain struct {
 	WasmRuntime *runtime.WasmRuntime
 }
 
-func (c *Chain) Init(indexerRepo *repository.IndexerRepository) *Chain {
+func (c *Chain) Init(indexerDbRepo *indexerDb.DBRepository) *Chain {
 	c.Store = store.GetInstance(store.ChainDB)
 
 	c.Mempool = new(Mempool)
 	c.Mempool.Init(c.Store.KV)
 
-	c.WasmRuntime = &runtime.WasmRuntime{Store: *store.GetInstance(store.SmartIndexDB), IndexerRepo: indexerRepo}
+	c.WasmRuntime = &runtime.WasmRuntime{Store: *store.GetInstance(store.SmartIndexDB), IndexerDbRepo: indexerDbRepo}
 
 	log.Println("[+] chain initialized")
 
