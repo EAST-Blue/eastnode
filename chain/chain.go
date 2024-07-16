@@ -310,6 +310,8 @@ func (c *Chain) ProduceBlock() error {
 
 		log.Println("Processing new block")
 
+		c.doltCreateNewBranch("working_branch")
+
 		c.Lock()
 
 		lastBlock := c.GetBlock(blockHeight)
@@ -320,6 +322,7 @@ func (c *Chain) ProduceBlock() error {
 
 		// take the first 10 transactions
 		for i := uint64(0); i < pendingTx; i++ {
+
 			pSignedTx := c.Mempool.Get(i) // ensure pushback
 
 			txUnpacked := pSignedTx.Unpack()
@@ -329,13 +332,19 @@ func (c *Chain) ProduceBlock() error {
 
 			// Process actions
 			for i, action := range *parsedActions {
+				var err error
 				if action.Kind == "deploy" || action.Kind == "redeploy" {
-					c.ProcessDeploy(txUnpacked, action)
+					_, err = c.ProcessDeploy(txUnpacked, action)
 					// WORKAROUND: file is too large for column 'actions'
 					(*parsedActions)[i].Args = []string{}
 					txUnpacked.Actions = utils.BorshSerializeAndEncodeHex(parsedActions)
 				} else if action.Kind == "call" {
-					c.ProcessCall(txUnpacked, action)
+					_, err = c.ProcessCall(txUnpacked, action)
+				}
+
+				if err != nil {
+					// If error, revert branch
+					c.doltHardReset("working_branch")
 				}
 			}
 
@@ -349,6 +358,8 @@ func (c *Chain) ProduceBlock() error {
 			if err != nil {
 				panic(err)
 			}
+
+			c.doltAddAndCommit(fmt.Sprintf("tx_%d_%d", blockHeight+1, i))
 
 			transactions = append(transactions, pSignedTx)
 			txMerkleTree = append(txMerkleTree, types.MerkleTreeContent{
@@ -402,7 +413,10 @@ func (c *Chain) ProduceBlock() error {
 
 		// consensus done
 		// commit block
+		c.doltCheckout("main")
+		c.doltMergeAndSquashBranch("working_branch")
 		c.doltAddAndCommit(fmt.Sprintf("commit new block %d", newBlock.Header.Height))
+		c.doltDeleteBranch("working_branch")
 
 		// remove pending transaction
 		for i := uint64(0); i < (pendingTx); i++ {
@@ -439,23 +453,27 @@ func (c *Chain) ProduceBlock() error {
 	return nil
 }
 
-func (c *Chain) ProcessWasmCall(signer string, smartIndexAddress string, functionName string, args []string, kind types.ActionKind) any {
+func (c *Chain) ProcessWasmCall(signer string, smartIndexAddress string, functionName string, args []string, kind types.ActionKind) (any, error) {
 
 	var resultWasmBlob []byte
 	sr := c.Store.Instance.QueryRow("SELECT wasm_blob FROM smart_index WHERE smart_index_address = ?;", smartIndexAddress)
 	sr.Scan(&resultWasmBlob)
 
+	if len(resultWasmBlob) == 0 {
+		return "", fmt.Errorf("Smart Index not found")
+	}
+
 	return c.WasmRuntime.RunWasmFunction(runtime.Address(signer), resultWasmBlob, smartIndexAddress, functionName, args, kind)
 }
 
-func (c *Chain) ProcessCall(tx types.Transaction, action types.Action) {
-	c.ProcessWasmCall(tx.Signer, tx.Receiver, action.FunctionName, action.Args, types.Call)
+func (c *Chain) ProcessCall(tx types.Transaction, action types.Action) (any, error) {
+	return c.ProcessWasmCall(tx.Signer, tx.Receiver, action.FunctionName, action.Args, types.Call)
 }
 
-func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string {
+func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) (string, error) {
 	actionSerialized, err := borsh.Serialize(action)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	// TODO: Validate wasm file
@@ -468,12 +486,12 @@ func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string 
 		publicKey, err := hex.DecodeString(tx.Signer)
 		hash, err := hex.DecodeString(utils.SHA256(append(actionSerialized, publicKey...)))
 		if err != nil {
-			panic(err)
+			return "", err
 		}
 
 		smartIndexAddress, err = bech32.EncodeFromBase256("idx", hash)
 		if err != nil {
-			panic(err)
+			return "", err
 		}
 
 		// maximum length is 64, trimmed this to 32 chars
@@ -485,8 +503,7 @@ func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string 
 				VALUES (?, ?, UNHEX(?));`, smartIndexAddress, tx.Signer, wasmBytes,
 		)
 		if err != nil {
-			// TODO: handle error here, do not panic
-			fmt.Println(err)
+			return "", err
 		}
 	} else { // redeploy
 		smartIndexAddress = action.Args[1]
@@ -494,12 +511,11 @@ func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string 
 			`UPDATE smart_index SET wasm_blob = UNHEX(?) WHERE smart_index_address = ?;`, wasmBytes, smartIndexAddress,
 		)
 		if err != nil {
-			// TODO: handle error here, do not panic
-			fmt.Println(err)
+			return "", err
 		}
 	}
 
-	return smartIndexAddress
+	return smartIndexAddress, nil
 }
 
 func (c *Chain) GetSmartIndexWasm(smartIndexAddress string) []byte {
@@ -535,7 +551,8 @@ func (c *Chain) GetTransaction(txId string) map[string]interface{} {
 // DOLT
 
 func (c *Chain) doltAddAndCommit(commitMessage string) {
-	_, err := c.Store.Instance.Exec("CALL DOLT_COMMIT('-Am', ?);", commitMessage)
+	_, err := c.Store.Instance.Exec("CALL DOLT_COMMIT('--allow-empty', '-Am', ?);", commitMessage)
+	_, err = c.WasmRuntime.Store.Instance.Exec("CALL DOLT_COMMIT('--allow-empty', '-Am', ?);", commitMessage)
 
 	if err != nil {
 		panic(err)
@@ -544,14 +561,34 @@ func (c *Chain) doltAddAndCommit(commitMessage string) {
 
 func (c *Chain) doltCreateNewBranch(branchName string) {
 	_, err := c.Store.Instance.Exec("CALL DOLT_CHECKOUT('-b', ?);", branchName)
+	_, err = c.WasmRuntime.Store.Instance.Exec("CALL DOLT_CHECKOUT('-b', ?);", branchName)
 
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (c *Chain) doltMergeBranch(branchName string) {
-	_, err := c.Store.Instance.Exec("CALL DOLT_MERGE(?);", branchName)
+func (c *Chain) doltDeleteBranch(branchName string) {
+	_, err := c.Store.Instance.Exec("CALL DOLT_BRANCH('-d', '-f', ?);", branchName)
+	_, err = c.WasmRuntime.Store.Instance.Exec("CALL DOLT_BRANCH('-d', '-f', ?);", branchName)
+
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (c *Chain) doltHardReset(branchName string) {
+	_, err := c.Store.Instance.Exec("CALL DOLT_RESET('--hard', ?);", branchName)
+	_, err = c.WasmRuntime.Store.Instance.Exec("CALL DOLT_RESET('--hard', ?);", branchName)
+
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (c *Chain) doltMergeAndSquashBranch(branchName string) {
+	_, err := c.Store.Instance.Exec("CALL DOLT_MERGE(?, '--squash');", branchName)
+	_, err = c.WasmRuntime.Store.Instance.Exec("CALL DOLT_MERGE(?, '--squash');", branchName)
 
 	if err != nil {
 		panic(err)
@@ -560,6 +597,7 @@ func (c *Chain) doltMergeBranch(branchName string) {
 
 func (c *Chain) doltCheckout(branchName string) {
 	_, err := c.Store.Instance.Exec("CALL DOLT_CHECKOUT(?);", branchName)
+	_, err = c.WasmRuntime.Store.Instance.Exec("CALL DOLT_CHECKOUT(?);", branchName)
 
 	if err != nil {
 		panic(err)
