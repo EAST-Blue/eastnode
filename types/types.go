@@ -39,6 +39,10 @@ type SignedTransaction struct {
 	Transaction string `json:"transaction"`
 }
 
+type JsonArray struct {
+	Array []string
+}
+
 func (st *SignedTransaction) Unpack() Transaction {
 	txUnpacked := new(Transaction)
 

@@ -37,6 +37,11 @@ func (s *Store) InitChainDb() {
 				wasm_blob BLOB,
 				primary key(smart_index_address)
 			);
+			CREATE TABLE transaction_logs (
+				id VARCHAR(255),
+				statuses JSON,
+				logs JSON
+			);
 			CALL DOLT_COMMIT('-Am', 'init core schema');
 		`)
 
