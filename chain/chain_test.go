@@ -83,7 +83,7 @@ func TestProcessDeploy(t *testing.T) {
 		Actions: serializedActionsHex,
 	}
 
-	smartIndexAddress := bc.ProcessDeploy(transaction, actions[0])
+	smartIndexAddress, err := bc.ProcessDeploy(transaction, actions[0])
 
 	var resultSmartIndexAddress string
 	var resultOwnerAddress string
@@ -93,7 +93,9 @@ func TestProcessDeploy(t *testing.T) {
 
 	sr.Scan(&resultSmartIndexAddress, &resultOwnerAddress, &resultWasmBlob)
 
-	SmartIndexAddress = smartIndexAddress
+	if smartIndexAddress != "" {
+		SmartIndexAddress = smartIndexAddress
+	}
 
 	if resultSmartIndexAddress != smartIndexAddress {
 		t.Error("Address differ")
@@ -128,7 +130,11 @@ func TestProcessCall(t *testing.T) {
 		Actions:  serializedActionsHex,
 	}
 
-	bc.ProcessCall(transaction, actions[0])
+	_, err = bc.ProcessCall(transaction, actions[0])
+
+	if err != nil {
+		t.Error(err)
+	}
 
 	res, err := bc.WasmRuntime.Store.Instance.Query("show tables;")
 
@@ -137,9 +143,6 @@ func TestProcessCall(t *testing.T) {
 	}
 
 	var str string
-	res.Scan(&str)
-
-	res.Next()
 	res.Scan(&str)
 
 	res.Next()
