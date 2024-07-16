@@ -89,7 +89,7 @@ func (s *Store) Delete(tableName string, whereCondition map[string]interface{}) 
 	}
 }
 
-func (s *Store) Select(tableName string, whereCondition map[string]interface{}) interface{} {
+func (s *Store) Select(tableName string, whereCondition map[string]interface{}) (interface{}, error) {
 	ctx := context.Background()
 
 	whereConditionStr := ""
@@ -110,11 +110,11 @@ func (s *Store) Select(tableName string, whereCondition map[string]interface{}) 
 		Where(whereConditionStr).
 		Limit(1).
 		ScanAndCount(ctx); err != nil {
-		return "not-found"
+		return nil, err
 	} else {
 		fmt.Println("[+] Select : ", count, result)
 	}
-	return result
+	return result, nil
 }
 
 func (s *Store) InitWasmDB() {

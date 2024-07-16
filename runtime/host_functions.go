@@ -76,17 +76,17 @@ func Delete(s store.Store, contractAddress string, tableName string, whereCondit
 	s.Delete(getStateTableName(contractAddress, tableName), whereConditionMap)
 }
 
-func Select(s store.Store, contractAddress string, tableName string, whereCondition string) string {
+func Select(s store.Store, contractAddress string, tableName string, whereCondition string) (string, error) {
 	var whereConditionMap map[string]interface{}
 
 	if err := json.Unmarshal([]byte(whereCondition), &whereConditionMap); err != nil {
 		log.Panicln(err)
 	}
 
-	result := s.Select(getStateTableName(contractAddress, tableName), whereConditionMap)
+	result, err := s.Select(getStateTableName(contractAddress, tableName), whereConditionMap)
 
-	if result == "not-found" {
-		return `{"error":"not-found"}`
+	if err != nil {
+		return "", fmt.Errorf(`{"error":"%s"}`, err)
 	}
 
 	resultMarshalled, err := json.Marshal(result)
@@ -94,7 +94,7 @@ func Select(s store.Store, contractAddress string, tableName string, whereCondit
 		log.Panicln(err)
 	}
 
-	return string(resultMarshalled)
+	return string(resultMarshalled), nil
 }
 
 func getStateTableName(contractAddress string, tableName string) string {

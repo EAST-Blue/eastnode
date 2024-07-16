@@ -70,12 +70,23 @@ func (s *RuntimeServer) Query(r *http.Request, params *types.RuntimeServerQuery,
 	} else if params.FunctionName == "view_function" {
 		smartIndexAddress := params.Target
 		functionName := params.Args[0]
-		result, _ := json.Marshal(s.Chain.ProcessWasmCall("", smartIndexAddress, functionName, params.Args[1:], types.View))
+		res, err := s.Chain.ProcessWasmCall("", smartIndexAddress, functionName, params.Args[1:], types.View)
 
-		*reply = types.ServerQueryReply{
-			BlockHash:   blockHash,
-			BlockHeight: blockHeight,
-			Result:      hex.EncodeToString(result),
+		if err != nil {
+			*reply = types.ServerQueryReply{
+				BlockHash:   blockHash,
+				BlockHeight: blockHeight,
+				Result:      hex.EncodeToString([]byte(err.Error())),
+			}
+
+		} else {
+			result, _ := json.Marshal(res)
+
+			*reply = types.ServerQueryReply{
+				BlockHash:   blockHash,
+				BlockHeight: blockHeight,
+				Result:      hex.EncodeToString(result),
+			}
 		}
 
 	} else if params.FunctionName == "get_transaction" {

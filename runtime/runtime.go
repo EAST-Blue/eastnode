@@ -82,7 +82,7 @@ func (r *WasmRuntime) writeString(memory api.Memory, str string) uint32 {
 	return uint32(stringOffset)
 }
 
-func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndexAddress string, signer Address, kind types.ActionKind, output *string) api.Module {
+func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndexAddress string, signer Address, kind types.ActionKind, output *string, errorMessage *error) api.Module {
 	wazeroRuntime := wazero.NewRuntime(ctx)
 
 	envBuilder := wazeroRuntime.
@@ -150,11 +150,18 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 			tableNameStr := ToString(r.Mod.Memory(), int64(tableName))
 			whereConditionStr := ToString(r.Mod.Memory(), int64(whereCondition))
 
-			result := Select(r.Store, smartIndexAddress, tableNameStr, whereConditionStr)
+			result, err := Select(r.Store, smartIndexAddress, tableNameStr, whereConditionStr)
 
-			ptr := r.writeString(r.Mod.Memory(), result)
+			if err != nil {
+				*errorMessage = err
+				ptr := r.writeString(r.Mod.Memory(), err.Error())
 
-			return uint32(ptr)
+				return uint32(ptr)
+			} else {
+				ptr := r.writeString(r.Mod.Memory(), result)
+
+				return uint32(ptr)
+			}
 		}).
 		Export("selectItem").
 		NewFunctionBuilder().
@@ -241,13 +248,18 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 	return mod
 }
 
-func (r *WasmRuntime) RunWasmFunction(signer Address, wasmBytes []byte, smartIndexAddress string, functionName string, args []string, kind types.ActionKind) any {
+func (r *WasmRuntime) RunWasmFunction(signer Address, wasmBytes []byte, smartIndexAddress string, functionName string, args []string, kind types.ActionKind) (any, error) {
 	ctx := context.Background()
 	defer ctx.Done()
 
 	var output string
-	mod := r.loadWasm(wasmBytes, ctx, smartIndexAddress, signer, kind, &output)
+	var errorMessage error
+	mod := r.loadWasm(wasmBytes, ctx, smartIndexAddress, signer, kind, &output, &errorMessage)
 	f := mod.ExportedFunction(functionName)
+
+	if f == nil {
+		return "", fmt.Errorf("Function not found")
+	}
 
 	// All arguments are stringified pointers
 	argsPtr := make([]uint64, len(args))
@@ -259,8 +271,12 @@ func (r *WasmRuntime) RunWasmFunction(signer Address, wasmBytes []byte, smartInd
 	_, err := f.Call(ctx, argsPtr...)
 
 	if err != nil {
-		fmt.Println("Error", err)
+		return "", err
 	}
 
-	return output
+	if errorMessage != nil {
+		return "", errorMessage
+	}
+
+	return output, nil
 }
