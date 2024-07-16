@@ -2,7 +2,7 @@ package utils
 
 import (
 	"database/sql"
-	"eastnode/indexer/model"
+	indexerDb "eastnode/indexer/repository/db"
 	"eastnode/utils"
 	"log"
 	"os"
@@ -45,7 +45,7 @@ func GetFakeInstance(instanceType InstanceType) *Store {
 				}
 			}
 
-			db, err := model.NewDB(mysql.New(mysql.Config{
+			db, err := indexerDb.NewDB(mysql.New(mysql.Config{
 				DriverName: "dolt",
 				DSN:        "file://" + utils.Cwd() + "/db_test?commitname=root&commitemail=root@east&multistatements=true&database=indexer",
 			}), &gorm.Config{})

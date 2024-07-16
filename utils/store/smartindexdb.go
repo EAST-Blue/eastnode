@@ -12,14 +12,6 @@ import (
 	"github.com/uptrace/bun/extra/bundebug"
 )
 
-type WasmBytes struct {
-	bun.BaseModel `bun:"table:wasm_bytes"`
-
-	ID    int64  `bun:",pk,autoincrement"`
-	Hash  string `bun:",unique"`
-	Bytes []byte
-}
-
 func (s *Store) CreateTable(model interface{}, tableName string) {
 	ctx := context.Background()
 
@@ -134,13 +126,6 @@ func (s *Store) InitWasmDB() {
 		bundebug.WithVerbose(true),
 		bundebug.FromEnv("BUNDEBUG"),
 	))
-
-	ctx := context.Background()
-	_, err := bundb.NewCreateTable().Model((*WasmBytes)(nil)).IfNotExists().Exec(ctx)
-
-	if err != nil {
-		log.Panicln(err)
-	}
 
 	s.BunInstance = bundb
 }

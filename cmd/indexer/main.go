@@ -1,22 +1,18 @@
 package main
 
 import (
-	"eastnode/indexer/peer"
-	"eastnode/indexer/store"
+	"eastnode/indexer"
+	"eastnode/indexer/repository/bitcoin"
+	"eastnode/indexer/repository/db"
 	storeDB "eastnode/utils/store"
-
-	"github.com/btcsuite/btcd/chaincfg"
 )
 
 func main() {
+	bitcoinRepo := bitcoin.NewBitcoinRepo("http://localhost:18443", "east", "east")
 	s := storeDB.GetInstance(storeDB.IndexerDB)
-	str := store.NewStorage(&chaincfg.RegressionNetParams, s.Gorm)
-	p, err := peer.NewPeer("localhost:18444", str)
-	if err != nil {
-		panic(err)
-	}
-	err = p.Run()
-	if err != nil {
-		panic(err)
-	}
+	dbRepo := db.NewDBRepository(s.Gorm)
+	indexerRepo := indexer.NewIndexer(dbRepo, bitcoinRepo)
+	scheduler := indexer.NewScheduler(indexerRepo)
+
+	scheduler.CheckBlock()
 }

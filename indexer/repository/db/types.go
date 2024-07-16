@@ -1,39 +1,58 @@
-package model
+package db
 
 import (
-	"time"
-
 	"gorm.io/gorm"
 )
+
+const INDEXER_LAST_HEIGHT_KEY = "INDEXER_LAST_HEIGHT_KEY"
+
+type Indexer struct {
+	gorm.Model
+
+	Key   string `gorm:"index:idx_key,unique"`
+	Value string
+}
 
 type P2shAsmScripts struct {
 	LockScripts   []string `json:"lock_scripts"`
 	UnlockScripts []string `json:"unlock_scripts"`
 }
 
+type UpdateOutpointSpendingData struct {
+	PreviousTxHash  string
+	PreviousTxIndex uint32
+
+	SpendingTxID    uint
+	SpendingTxHash  string
+	SpendingTxIndex uint32
+	Sequence        uint32
+	SignatureScript string
+	Witness         string
+}
+
 type Block struct {
 	gorm.Model
 
-	ID uint `json:"id"`
+	ID uint `gorm:"primarykey" json:"id"`
 
 	Hash     string `json:"hash"`
-	Height   int32  `json:"height"`
+	Height   int32  `gorm:"index:idx_height" json:"height"`
 	IsOrphan bool   `json:"is_orphan"`
 
-	PreviousBlock string    `json:"previous_block"`
-	Version       int32     `json:"version"`
-	Nonce         uint32    `json:"nonce"`
-	Timestamp     time.Time `json:"timestamp"`
-	Bits          uint32    `json:"bits"`
-	MerkleRoot    string    `json:"merkle_root"`
+	PreviousBlock string `json:"previous_block"`
+	Version       int32  `json:"version"`
+	Nonce         uint32 `json:"nonce"`
+	Timestamp     uint32 `json:"timestamp"`
+	Bits          string `json:"bits"`
+	MerkleRoot    string `json:"merkle_root"`
 }
 
 type Transaction struct {
 	gorm.Model
 
-	ID uint `json:"id"`
+	ID uint `gorm:"primarykey" json:"id"`
 
-	Hash     string `json:"hash"`
+	Hash     string `gorm:"index:idx_hash" json:"hash"`
 	LockTime uint32 `json:"lock_time"`
 	Version  int32  `json:"version"`
 	Safe     bool   `json:"safe"`
@@ -46,18 +65,18 @@ type Transaction struct {
 type OutPoint struct {
 	gorm.Model
 
-	ID uint `json:"id"`
+	ID uint `gorm:"primarykey" json:"id"`
 
 	SpendingTxID    uint   `json:"spending_tx_id"`
-	SpendingTxHash  string `json:"spending_tx_hash"`
+	SpendingTxHash  string `gorm:"index:idx_spending_tx_hash" json:"spending_tx_hash"`
 	SpendingTxIndex uint32 `json:"spending_tx_index"`
 	Sequence        uint32 `json:"sequence"`
 	SignatureScript string `json:"signature_script"`
 	Witness         string `json:"witness"`
 
 	FundingTxID    uint   `json:"funding_tx_id"`
-	FundingTxHash  string `json:"funding_tx_hash"`
-	FundingTxIndex uint32 `json:"funding_tx_index"`
+	FundingTxHash  string `gorm:"index:idx_funding_tx_hash;index:idx_funding_tx_hash_funding_tx_index,priority:1" json:"funding_tx_hash"`
+	FundingTxIndex uint32 `gorm:"index:idx_funding_tx_hash_funding_tx_index,priority:2" json:"funding_tx_index"`
 	PkScript       string `json:"pk_script"`
 	Value          int64  `json:"value"`
 	Spender        string `json:"spender"`
@@ -74,7 +93,7 @@ func NewDB(dialector gorm.Dialector, opts ...gorm.Option) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	err = db.AutoMigrate(&Block{}, &Transaction{}, &OutPoint{})
+	err = db.AutoMigrate(&Indexer{}, &Block{}, &Transaction{}, &OutPoint{})
 	if err != nil {
 		panic(err)
 	}

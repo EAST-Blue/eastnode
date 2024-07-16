@@ -3,10 +3,8 @@ module eastnode
 go 1.22.4
 
 require (
-	github.com/btcsuite/btcd v0.24.0
 	github.com/btcsuite/btcd/btcec/v2 v2.3.3
 	github.com/btcsuite/btcd/btcutil v1.1.5
-	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0
 	github.com/cbergoon/merkletree v0.2.0
 	github.com/dolthub/driver v0.1.3
 	github.com/dustinxie/ecc v0.0.0-20210511000915-959544187564
@@ -20,11 +18,6 @@ require (
 )
 
 require (
-	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f // indirect
-	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/decred/dcrd/crypto/blake256 v1.0.1 // indirect
-	github.com/decred/dcrd/lru v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/libsv/go-bk v0.1.6 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect

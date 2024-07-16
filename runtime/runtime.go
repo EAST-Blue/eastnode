@@ -3,7 +3,7 @@ package runtime
 import (
 	"bytes"
 	"context"
-	"eastnode/indexer/repository"
+	indexerDb "eastnode/indexer/repository/db"
 	"eastnode/types"
 	store "eastnode/utils/store"
 	"encoding/binary"
@@ -29,9 +29,9 @@ const (
 type Address string
 
 type WasmRuntime struct {
-	Store       store.Store
-	Mod         api.Module
-	IndexerRepo *repository.IndexerRepository
+	Store         store.Store
+	Mod           api.Module
+	IndexerDbRepo *indexerDb.DBRepository
 }
 
 // ref: https://github.com/RPG-18/wasmer-go-assemblyscript/blob/main/assemblyscript/go.ts
@@ -159,7 +159,7 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		Export("selectItem").
 		NewFunctionBuilder().
 		WithFunc(func(height int64) uint32 {
-			result, err := r.IndexerRepo.GetBlockByHeight(height)
+			result, err := r.IndexerDbRepo.GetBlockByHeight(height)
 			if err != nil {
 				panic(err)
 			}
@@ -173,7 +173,7 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		NewFunctionBuilder().
 		WithFunc(func(blockHash int32) uint32 {
 			blockHashStr := ToString(r.Mod.Memory(), int64(blockHash))
-			result, err := r.IndexerRepo.GetTransactionsByBlockHash(blockHashStr)
+			result, err := r.IndexerDbRepo.GetTransactionsByBlockHash(blockHashStr)
 			if err != nil {
 				panic(err)
 			}
@@ -188,7 +188,7 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		NewFunctionBuilder().
 		WithFunc(func(transactionHash int32) uint32 {
 			transactionHashStr := ToString(r.Mod.Memory(), int64(transactionHash))
-			result, err := r.IndexerRepo.GetOutpointsByTransactionHash(transactionHashStr)
+			result, err := r.IndexerDbRepo.GetOutpointsByTransactionHash(transactionHashStr)
 			if err != nil {
 				panic(err)
 			}

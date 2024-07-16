@@ -1,7 +1,7 @@
 package chain
 
 import (
-	"eastnode/indexer/repository"
+	indexerDb "eastnode/indexer/repository/db"
 	"eastnode/runtime"
 	"eastnode/types"
 	"eastnode/utils"
@@ -32,13 +32,13 @@ type Chain struct {
 	WasmRuntime *runtime.WasmRuntime
 }
 
-func (c *Chain) Init(indexerRepo *repository.IndexerRepository) *Chain {
+func (c *Chain) Init(indexerDbRepo *indexerDb.DBRepository) *Chain {
 	c.Store = store.GetInstance(store.ChainDB)
 
 	c.Mempool = new(Mempool)
 	c.Mempool.Init(c.Store.KV)
 
-	c.WasmRuntime = &runtime.WasmRuntime{Store: *store.GetInstance(store.SmartIndexDB), IndexerRepo: indexerRepo}
+	c.WasmRuntime = &runtime.WasmRuntime{Store: *store.GetInstance(store.SmartIndexDB), IndexerDbRepo: indexerDbRepo}
 
 	log.Println("[+] chain initialized")
 
@@ -229,11 +229,11 @@ func (c *Chain) ProduceBlock() error {
 				Transaction: hex.EncodeToString(gTxPacked),
 			}
 
-			_, err = c.Store.Instance.Exec(fmt.Sprintf(`
+			_, err = c.Store.Instance.Exec(`
 				INSERT INTO transactions (id, block_id, signer, receiver, actions, created_at)
-				VALUES ('%s', '%d', '%s', '%s', '%x', '%d');`,
+				VALUES (?, ?, ?, ?, ?, ?);`,
 				gSignedTx.ID, 0, gTx.Signer, gTx.Receiver, actionsPacked, genesisTime,
-			))
+			)
 			if err != nil {
 				panic(err)
 			}
@@ -336,20 +336,16 @@ func (c *Chain) ProduceBlock() error {
 					txUnpacked.Actions = utils.BorshSerializeAndEncodeHex(parsedActions)
 				} else if action.Kind == "call" {
 					c.ProcessCall(txUnpacked, action)
-				} else if action.Kind == "view" {
-					// TODO: handle view function in the front, before going into produce block, so there'll be no view function here
 				}
 			}
 
-			q := fmt.Sprintf(`
-				INSERT INTO transactions (id, block_id, signer, receiver, actions, created_at)
-				VALUES ('%s', '%d', '%s', '%s', '%s', '%d');`,
-				pSignedTx.ID, blockHeight+1, txUnpacked.Signer, txUnpacked.Receiver, txUnpacked.Actions, blockTime,
-			)
-
 			// TODO: create another table for logs (tx_id, logs)
 
-			_, err := c.Store.Instance.Exec(q)
+			_, err := c.Store.Instance.Exec(
+				`INSERT INTO transactions (id, block_id, signer, receiver, actions, created_at)
+				VALUES (?, ?, ?, ?, ?, ?);`,
+				pSignedTx.ID, blockHeight+1, txUnpacked.Signer, txUnpacked.Receiver, txUnpacked.Actions, blockTime,
+			)
 			if err != nil {
 				panic(err)
 			}
@@ -446,7 +442,7 @@ func (c *Chain) ProduceBlock() error {
 func (c *Chain) ProcessWasmCall(signer string, smartIndexAddress string, functionName string, args []string, kind types.ActionKind) any {
 
 	var resultWasmBlob []byte
-	sr := c.Store.Instance.QueryRow(fmt.Sprintf("SELECT wasm_blob FROM smart_index WHERE smart_index_address = '%s';", smartIndexAddress))
+	sr := c.Store.Instance.QueryRow("SELECT wasm_blob FROM smart_index WHERE smart_index_address = ?;", smartIndexAddress)
 	sr.Scan(&resultWasmBlob)
 
 	return c.WasmRuntime.RunWasmFunction(runtime.Address(signer), resultWasmBlob, smartIndexAddress, functionName, args, kind)
@@ -465,7 +461,6 @@ func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string 
 	// TODO: Validate wasm file
 	wasmBytes := action.Args[0]
 
-	var q string
 	var smartIndexAddress string
 
 	if len(action.Args) == 1 { // new smart index
@@ -485,21 +480,23 @@ func (c *Chain) ProcessDeploy(tx types.Transaction, action types.Action) string 
 		smartIndexAddress = smartIndexAddress[:32]
 
 		// TODO: change this to query, exec to prevent sqli
-		q = fmt.Sprintf(`
-				INSERT INTO smart_index (smart_index_address, owner_address, wasm_blob)
-				VALUES ('%s', '%s', X'%s');`, smartIndexAddress, tx.Signer, wasmBytes,
+		_, err = c.Store.Instance.Exec(
+			`INSERT INTO smart_index (smart_index_address, owner_address, wasm_blob)
+				VALUES (?, ?, UNHEX(?));`, smartIndexAddress, tx.Signer, wasmBytes,
 		)
+		if err != nil {
+			// TODO: handle error here, do not panic
+			fmt.Println(err)
+		}
 	} else { // redeploy
 		smartIndexAddress = action.Args[1]
-		q = fmt.Sprintf(`
-				UPDATE smart_index SET wasm_blob = x'%s' WHERE smart_index_address = '%s';`, wasmBytes, smartIndexAddress,
+		_, err = c.Store.Instance.Exec(
+			`UPDATE smart_index SET wasm_blob = UNHEX(?) WHERE smart_index_address = ?;`, wasmBytes, smartIndexAddress,
 		)
-	}
-
-	_, err = c.Store.Instance.Exec(q)
-	if err != nil {
-		// TODO: handle error here, do not panic
-		fmt.Println(err)
+		if err != nil {
+			// TODO: handle error here, do not panic
+			fmt.Println(err)
+		}
 	}
 
 	return smartIndexAddress
