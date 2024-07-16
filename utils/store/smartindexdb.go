@@ -119,7 +119,7 @@ func (s *Store) Select(tableName string, whereCondition map[string]interface{}) 
 
 func (s *Store) InitWasmDB() {
 	s.Instance.Exec("CREATE DATABASE states")
-	s.Instance.Exec("Use states")
+	s.Instance.Exec("USE states")
 
 	bundb := bun.NewDB(s.Instance, mysqldialect.New())
 	bundb.AddQueryHook(bundebug.NewQueryHook(
