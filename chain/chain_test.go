@@ -89,7 +89,7 @@ func TestProcessDeploy(t *testing.T) {
 	var resultOwnerAddress string
 	var resultWasmBlob string
 
-	sr := bc.Store.Instance.QueryRow(fmt.Sprintf("SELECT smart_index_address, owner_address, wasm_blob FROM smart_index WHERE smart_index_address = '%s';", smartIndexAddress))
+	sr := bc.Store.Instance.QueryRow("SELECT smart_index_address, owner_address, wasm_blob FROM smart_index WHERE smart_index_address = ?;", smartIndexAddress)
 
 	sr.Scan(&resultSmartIndexAddress, &resultOwnerAddress, &resultWasmBlob)
 
@@ -179,7 +179,7 @@ func TestProcessRedeploy(t *testing.T) {
 	bc.ProcessDeploy(transaction, actions[0])
 
 	var resultWasmBlob string
-	sr := bc.Store.Instance.QueryRow(fmt.Sprintf("SELECT wasm_blob FROM smart_index WHERE smart_index_address = '%s';", SmartIndexAddress))
+	sr := bc.Store.Instance.QueryRow("SELECT wasm_blob FROM smart_index WHERE smart_index_address = ?;", SmartIndexAddress)
 	sr.Scan(&resultWasmBlob)
 
 	if resultWasmBlob != "AAAA" {

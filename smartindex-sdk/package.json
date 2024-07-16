@@ -1,8 +1,13 @@
 {
-  "name": "east-wasm-sdk",
+  "name": "@east-bitcoin-lib/smartindex-sdk",
   "version": "1.0.0",
   "license": "MIT",
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
+    "@changesets/cli": "^2.27.7",
     "as-bignum": "^0.3.1",
     "assemblyscript": "^0.27.27",
     "assemblyscript-json": "^1.1.0"
