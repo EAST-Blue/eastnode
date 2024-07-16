@@ -125,26 +125,6 @@ func (s *Store) Select(tableName string, whereCondition map[string]interface{}) 
 	return result
 }
 
-func (s *Store) ShowTables(noPrint bool) {
-	res, err := s.Instance.Query("show tables")
-
-	if err != nil {
-		log.Panicln(err)
-	}
-
-	var str string
-	res.Scan(&str)
-
-	for res.Next() {
-		res.Scan(&str)
-		if !noPrint {
-			fmt.Println(str)
-
-		}
-	}
-
-}
-
 func (s *Store) InitWasmDB() {
 	s.Instance.Exec("CREATE DATABASE states")
 	s.Instance.Exec("Use states")

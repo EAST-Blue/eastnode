@@ -280,11 +280,7 @@ func (c *Chain) ProduceBlock() error {
 
 		// consensus done
 		// commit block
-		_, err = c.Store.Instance.Exec("CALL DOLT_COMMIT('-Am', 'commit genesis block');")
-
-		if err != nil {
-			panic(err)
-		}
+		c.doltAddAndCommit("commit genesis block")
 
 		c.Store.KV.Update(func(tx *bolt.Tx) error {
 			bBlocks := tx.Bucket([]byte("blocks"))
@@ -410,17 +406,11 @@ func (c *Chain) ProduceBlock() error {
 
 		// consensus done
 		// commit block
-		_, err = c.Store.Instance.Exec(fmt.Sprintf(`
-			CALL DOLT_COMMIT('-Am', 'commit new block %d');
-		`, newBlock.Header.Height))
+		c.doltAddAndCommit(fmt.Sprintf("commit new block %d", newBlock.Header.Height))
 
 		// remove pending transaction
 		for i := uint64(0); i < (pendingTx); i++ {
 			c.Mempool.Dequeue()
-		}
-
-		if err != nil {
-			panic(err)
 		}
 
 		var cEngineHash string
@@ -543,4 +533,38 @@ func (c *Chain) GetTransaction(txId string) map[string]interface{} {
 	}
 
 	return res
+}
+
+// DOLT
+
+func (c *Chain) doltAddAndCommit(commitMessage string) {
+	_, err := c.Store.Instance.Exec("CALL DOLT_COMMIT('-Am', ?);", commitMessage)
+
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (c *Chain) doltCreateNewBranch(branchName string) {
+	_, err := c.Store.Instance.Exec("CALL DOLT_CHECKOUT('-b', ?);", branchName)
+
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (c *Chain) doltMergeBranch(branchName string) {
+	_, err := c.Store.Instance.Exec("CALL DOLT_MERGE(?);", branchName)
+
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (c *Chain) doltCheckout(branchName string) {
+	_, err := c.Store.Instance.Exec("CALL DOLT_CHECKOUT(?);", branchName)
+
+	if err != nil {
+		panic(err)
+	}
 }
