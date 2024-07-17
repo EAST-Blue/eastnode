@@ -31,11 +31,7 @@ type UpdateOutpointSpendingData struct {
 }
 
 type Block struct {
-	gorm.Model
-
-	ID uint `gorm:"primarykey" json:"id"`
-
-	Hash     string `json:"hash"`
+	Hash     string `gorm:"unique" json:"hash"`
 	Height   int32  `gorm:"index:idx_height" json:"height"`
 	IsOrphan bool   `json:"is_orphan"`
 
@@ -48,11 +44,7 @@ type Block struct {
 }
 
 type Transaction struct {
-	gorm.Model
-
-	ID uint `gorm:"primarykey" json:"id"`
-
-	Hash     string `gorm:"index:idx_hash" json:"hash"`
+	Hash     string `gorm:"index:idx_hash;unique" json:"hash"`
 	LockTime uint32 `json:"lock_time"`
 	Version  int32  `json:"version"`
 	Safe     bool   `json:"safe"`
@@ -63,10 +55,6 @@ type Transaction struct {
 }
 
 type OutPoint struct {
-	gorm.Model
-
-	ID uint `gorm:"primarykey" json:"id"`
-
 	SpendingTxID    uint   `json:"spending_tx_id"`
 	SpendingTxHash  string `gorm:"index:idx_spending_tx_hash" json:"spending_tx_hash"`
 	SpendingTxIndex uint32 `json:"spending_tx_index"`
@@ -75,8 +63,8 @@ type OutPoint struct {
 	Witness         string `json:"witness"`
 
 	FundingTxID    uint   `json:"funding_tx_id"`
-	FundingTxHash  string `gorm:"index:idx_funding_tx_hash;index:idx_funding_tx_hash_funding_tx_index,priority:1" json:"funding_tx_hash"`
-	FundingTxIndex uint32 `gorm:"index:idx_funding_tx_hash_funding_tx_index,priority:2" json:"funding_tx_index"`
+	FundingTxHash  string `gorm:"unique_index:idx_funding_tx_hash_funding_tx_index,priority:1" json:"funding_tx_hash"`
+	FundingTxIndex uint32 `gorm:"unique_index:idx_funding_tx_hash_funding_tx_index,priority:2" json:"funding_tx_index"`
 	PkScript       string `json:"pk_script"`
 	Value          int64  `json:"value"`
 	Spender        string `json:"spender"`
