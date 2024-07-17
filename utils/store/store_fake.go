@@ -30,14 +30,9 @@ func GetFakeInstance(instanceType InstanceType) *Store {
 
 		if instanceType == SmartIndexDB {
 			sSmartIndex = &Store{Instance: doltInstance}
-			sSmartIndex.InitWasmDB()
 
 			if _, err := os.Stat(utils.Cwd() + "/db_test/indexer"); os.IsNotExist(err) {
 				dump, _ := os.ReadFile("../utils/store/test/doltdump.sql")
-				_, err = sSmartIndex.Instance.Exec("CREATE DATABASE indexer")
-				if err != nil {
-					panic(err)
-				}
 
 				_, err = sSmartIndex.Instance.Exec(string(dump))
 				if err != nil {
@@ -54,6 +49,7 @@ func GetFakeInstance(instanceType InstanceType) *Store {
 			}
 
 			sSmartIndex.Gorm = db
+			sSmartIndex.InitWasmDB()
 			return sSmartIndex
 		} else {
 			sChain = &Store{Instance: doltInstance}
@@ -80,6 +76,11 @@ func GetFakeInstance(instanceType InstanceType) *Store {
 					owner_address VARCHAR(255),
 					wasm_blob BLOB,
 					primary key(smart_index_address)
+				);
+				CREATE TABLE transaction_logs (
+					id VARCHAR(255),
+					statuses JSON,
+					logs JSON
 				);
 				CALL DOLT_COMMIT('-Am', 'init core schema');
 			`)

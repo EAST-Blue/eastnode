@@ -37,7 +37,7 @@ func TestStringParamsAndResult(t *testing.T) {
 	wasmBytes, _ := os.ReadFile("../build/release.wasm")
 
 	wr := getWasmRuntime()
-	output := wr.RunWasmFunction("", wasmBytes, "", "processString", []string{"INPUT"}, types.Call)
+	output, _ := wr.RunWasmFunction("", wasmBytes, "", "processString", []string{"INPUT"}, types.Call)
 	if output != "output for INPUT" {
 		t.Error("output is incorrect")
 	}

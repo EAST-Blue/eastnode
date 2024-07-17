@@ -40,5 +40,5 @@ func main() {
 	router.Handle("/", rpcServer)
 
 	log.Println("rpc is running")
-	http.ListenAndServe(":8080", router)
+	http.ListenAndServe(":4000", router)
 }
