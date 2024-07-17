@@ -33,7 +33,7 @@ type UpdateOutpointSpendingData struct {
 type Block struct {
 	gorm.Model
 
-	ID uint `gorm:"primarykey" json:"id"`
+	ID uint `gorm:"primarykey;autoIncrement:true;unique" json:"id"`
 
 	Hash     string `json:"hash"`
 	Height   int32  `gorm:"index:idx_height" json:"height"`
@@ -50,7 +50,7 @@ type Block struct {
 type Transaction struct {
 	gorm.Model
 
-	ID uint `gorm:"primarykey" json:"id"`
+	ID uint `gorm:"primarykey;autoIncrement:true;unique" json:"id"`
 
 	Hash     string `gorm:"index:idx_hash" json:"hash"`
 	LockTime uint32 `json:"lock_time"`
@@ -65,7 +65,7 @@ type Transaction struct {
 type OutPoint struct {
 	gorm.Model
 
-	ID uint `gorm:"primarykey" json:"id"`
+	ID uint `gorm:"primarykey;autoIncrement:true;unique" json:"id"`
 
 	SpendingTxID    uint   `json:"spending_tx_id"`
 	SpendingTxHash  string `gorm:"index:idx_spending_tx_hash" json:"spending_tx_hash"`

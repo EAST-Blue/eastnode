@@ -118,15 +118,30 @@ func (d *DBRepository) GetLastHeight() (int32, error) {
 }
 
 func (d *DBRepository) CreateBlockWithTx(tx *gorm.DB, block *Block) error {
-	return tx.Save(block).Error
+	err := tx.Save(block).Error
+	if err == gorm.ErrDuplicatedKey {
+		return nil
+	}
+
+	return err
 }
 
 func (d *DBRepository) CreateTransactionWithTx(tx *gorm.DB, transaction *Transaction) error {
-	return tx.Save(transaction).Error
+	err := tx.Save(transaction).Error
+	if err == gorm.ErrDuplicatedKey {
+		return nil
+	}
+
+	return err
 }
 
 func (d *DBRepository) CreateOutpointWithTx(tx *gorm.DB, outpoint *OutPoint) error {
-	return tx.Save(outpoint).Error
+	err := tx.Save(outpoint).Error
+	if err == gorm.ErrDuplicatedKey {
+		return nil
+	}
+
+	return err
 }
 
 func (d *DBRepository) UpdateOutpointSpending(tx *gorm.DB, data *UpdateOutpointSpendingData) error {
