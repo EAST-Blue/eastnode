@@ -82,13 +82,31 @@ func ParseP2shSigHexToAsms(hex string) (*P2shAsmScripts, error) {
 	}, nil
 }
 
+func (d *DBRepository) SetLastHeight(height int32) error {
+	indexer := Indexer{
+		Key:   INDEXER_LAST_HEIGHT_KEY,
+		Value: strconv.Itoa(int(height)),
+	}
+
+	res := d.Db.Model(Indexer{}).Where("`key` = ?", INDEXER_LAST_HEIGHT_KEY).Updates(&indexer)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected > 0 {
+		return nil
+	}
+
+	res = d.Db.Save(&indexer)
+	return res.Error
+}
+
 func (d *DBRepository) SetLastHeightWithTx(tx *gorm.DB, height int32) error {
 	indexer := Indexer{
 		Key:   INDEXER_LAST_HEIGHT_KEY,
 		Value: strconv.Itoa(int(height)),
 	}
 
-	res := tx.Where("`key` = ?", INDEXER_LAST_HEIGHT_KEY).Model(Indexer{}).Updates(&indexer)
+	res := tx.Model(Indexer{}).Where("`key` = ?", INDEXER_LAST_HEIGHT_KEY).Updates(&indexer)
 	if res.Error != nil {
 		return res.Error
 	}
@@ -117,8 +135,21 @@ func (d *DBRepository) GetLastHeight() (int32, error) {
 	return int32(height), nil
 }
 
+func (d *DBRepository) CreateBlock(block *Block) error {
+	err := d.Db.Create(block).Error
+	if err == gorm.ErrDuplicatedKey {
+		return nil
+	}
+
+	return err
+}
+
 func (d *DBRepository) CreateBlockWithTx(tx *gorm.DB, block *Block) error {
-	err := tx.Save(block).Error
+	return tx.Create(block).Error
+}
+
+func (d *DBRepository) CreateTransaction(transaction *Transaction) error {
+	err := d.Db.Create(transaction).Error
 	if err == gorm.ErrDuplicatedKey {
 		return nil
 	}
@@ -127,7 +158,11 @@ func (d *DBRepository) CreateBlockWithTx(tx *gorm.DB, block *Block) error {
 }
 
 func (d *DBRepository) CreateTransactionWithTx(tx *gorm.DB, transaction *Transaction) error {
-	err := tx.Save(transaction).Error
+	return tx.Create(transaction).Error
+}
+
+func (d *DBRepository) CreateOutpoint(outpoint *OutPoint) error {
+	err := d.Db.Create(outpoint).Error
 	if err == gorm.ErrDuplicatedKey {
 		return nil
 	}
@@ -136,15 +171,22 @@ func (d *DBRepository) CreateTransactionWithTx(tx *gorm.DB, transaction *Transac
 }
 
 func (d *DBRepository) CreateOutpointWithTx(tx *gorm.DB, outpoint *OutPoint) error {
-	err := tx.Save(outpoint).Error
-	if err == gorm.ErrDuplicatedKey {
-		return nil
-	}
-
-	return err
+	return tx.Create(outpoint).Error
 }
 
-func (d *DBRepository) UpdateOutpointSpending(tx *gorm.DB, data *UpdateOutpointSpendingData) error {
+func (d *DBRepository) UpdateOutpointSpending(data *UpdateOutpointSpendingData) error {
+	res := d.Db.Where("`funding_tx_hash` = ? AND `funding_tx_index` = ?", data.PreviousTxHash, data.PreviousTxIndex).Model(OutPoint{}).Updates(map[string]interface{}{
+		"spending_tx_id":    data.SpendingTxID,
+		"spending_tx_hash":  data.SpendingTxHash,
+		"spending_tx_index": data.SpendingTxIndex,
+		"sequence":          data.Sequence,
+		"signature_script":  data.SignatureScript,
+		"witness":           data.Witness,
+	})
+	return res.Error
+}
+
+func (d *DBRepository) UpdateOutpointSpendingWithTx(tx *gorm.DB, data *UpdateOutpointSpendingData) error {
 	res := tx.Where("`funding_tx_hash` = ? AND `funding_tx_index` = ?", data.PreviousTxHash, data.PreviousTxIndex).Model(OutPoint{}).Updates(map[string]interface{}{
 		"spending_tx_id":    data.SpendingTxID,
 		"spending_tx_hash":  data.SpendingTxHash,

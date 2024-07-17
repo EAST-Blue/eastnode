@@ -45,6 +45,7 @@ func GetInstance(instanceType InstanceType) *Store {
 		lock.Lock()
 		defer lock.Unlock()
 		os.Mkdir("db", 0700)
+		os.Mkdir("db_indexer", 0700)
 
 		doltInstance, err := sql.Open("dolt", "file://"+utils.Cwd()+"/db?commitname=root&commitemail=root@east&multistatements=true")
 
@@ -61,6 +62,10 @@ func GetInstance(instanceType InstanceType) *Store {
 			sChain.InitChainDb()
 			return sChain
 		} else {
+			doltInstance, err := sql.Open("dolt", "file://"+utils.Cwd()+"/db_indexer?commitname=root&commitemail=root@east&multistatements=true")
+			if err != nil {
+				log.Panicln(err)
+			}
 			sIndexer = &Store{Instance: doltInstance}
 			sIndexer.InitIndexerDb()
 			return sIndexer

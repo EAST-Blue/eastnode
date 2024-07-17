@@ -52,13 +52,6 @@ func (i *Indexer) IndexBlocks(fromBlockHeight int32, toBlockHeight int32) error 
 func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error {
 	log.Printf("handle block height %d, hash %s", blockHeight, block.Hash)
 
-	tx := i.DbRepo.Db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
 	// insert block
 	newBlock := db.Block{
 		Hash:          block.Hash,
@@ -70,9 +63,8 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error 
 		Bits:          block.Bits,
 		MerkleRoot:    block.Merkleroot,
 	}
-	err := i.DbRepo.CreateBlockWithTx(tx, &newBlock)
+	err := i.DbRepo.CreateBlock(&newBlock)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 
@@ -85,13 +77,11 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error 
 			LockTime:   uint32(transaction.Locktime),
 			Version:    int32(transaction.Version),
 			Safe:       false,
-			BlockID:    newBlock.ID,
 			BlockHash:  block.Hash,
 			BlockIndex: uint32(idx),
 		}
-		err = i.DbRepo.CreateTransactionWithTx(tx, &newTx)
+		err = i.DbRepo.CreateTransaction(&newTx)
 		if err != nil {
-			tx.Rollback()
 			return err
 		}
 
@@ -99,8 +89,7 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error 
 
 		// vouts
 		for idxx, vout := range transaction.Vout {
-			err = i.DbRepo.CreateOutpointWithTx(tx, &db.OutPoint{
-				FundingTxID:    newTx.ID,
+			err = i.DbRepo.CreateOutpoint(&db.OutPoint{
 				FundingTxHash:  transaction.Txid,
 				FundingTxIndex: uint32(idxx),
 				PkScript:       vout.ScriptPubKey.Hex,
@@ -108,7 +97,6 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error 
 				Spender:        vout.ScriptPubKey.Address,
 			})
 			if err != nil {
-				tx.Rollback()
 				return err
 			}
 		}
@@ -117,8 +105,7 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error 
 		for idxx, vin := range transaction.Vin {
 			// coinbase
 			if vin.Coinbase != "" {
-				err = i.DbRepo.CreateOutpointWithTx(tx, &db.OutPoint{
-					SpendingTxID:    newTx.ID,
+				err = i.DbRepo.CreateOutpoint(&db.OutPoint{
 					SpendingTxHash:  transaction.Txid,
 					SpendingTxIndex: uint32(idxx),
 					Sequence:        uint32(vin.Sequence),
@@ -129,17 +116,15 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error 
 					FundingTxIndex: uint32(vin.Vout),
 				})
 				if err != nil {
-					tx.Rollback()
 					return err
 				}
 				continue
 			}
 
-			err = i.DbRepo.UpdateOutpointSpending(tx, &db.UpdateOutpointSpendingData{
+			err = i.DbRepo.UpdateOutpointSpending(&db.UpdateOutpointSpendingData{
 				PreviousTxHash:  vin.Txid,
 				PreviousTxIndex: uint32(vin.Vout),
 
-				SpendingTxID:    newTx.ID,
 				SpendingTxHash:  transaction.Txid,
 				SpendingTxIndex: uint32(idxx),
 				Sequence:        uint32(vin.Sequence),
@@ -147,19 +132,12 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error 
 				Witness:         strings.Join(vin.Txinwitness, ","),
 			})
 			if err != nil {
-				tx.Rollback()
 				return err
 			}
 		}
 	}
 
-	err = i.DbRepo.SetLastHeightWithTx(tx, blockHeight)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	return tx.Commit().Error
+	return i.DbRepo.SetLastHeight(blockHeight)
 }
 
 // TODO
