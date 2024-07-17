@@ -275,7 +275,7 @@ func (r *WasmRuntime) RunWasmFunction(signer Address, wasmBytes []byte, smartInd
 	}
 
 	if errorMessage != nil {
-		return "", errorMessage
+		return output, nil
 	}
 
 	return output, nil
