@@ -11,7 +11,7 @@ import (
 )
 
 func (s *Store) InitIndexerDb() {
-	if _, err := os.Stat(utils.Cwd() + "/db_indexer/indexer"); os.IsNotExist(err) {
+	if _, err := os.Stat(utils.Cwd() + "/db/indexer"); os.IsNotExist(err) {
 		_, err = s.Instance.Exec("CREATE DATABASE indexer")
 		if err != nil {
 			panic(err)
@@ -20,7 +20,7 @@ func (s *Store) InitIndexerDb() {
 
 	indexerDb, err := db.NewDB(mysql.New(mysql.Config{
 		DriverName: "dolt",
-		DSN:        "file://" + utils.Cwd() + "/db_indexer?commitname=root&commitemail=root@east&multistatements=true&database=indexer",
+		DSN:        "file://" + utils.Cwd() + "/db?commitname=root&commitemail=root@east&multistatements=true&database=indexer",
 	}), &gorm.Config{})
 	if err != nil {
 		panic(err)

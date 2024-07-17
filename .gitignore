@@ -1,6 +1,5 @@
 script/tx_builder/node_modules
 db/*
-db_indexer/*
 
 node_modules
 build
