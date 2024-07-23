@@ -22,6 +22,9 @@ export declare function deleteItem(tableName: string, whereCondition: string): b
 @external("env", "selectItem")
 export declare function selectItems(tableName: string, whereCondition: string): i32;
 
+@external("env", "selectNative")
+export declare function selectNative(statement: string, args: string): i32;
+
 @external("env", "getBlockByHeight")
 export declare function getBlockByHeight(height: u64): i32;
 

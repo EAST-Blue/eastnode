@@ -117,6 +117,53 @@ func (s *Store) Select(tableName string, whereCondition map[string]interface{}) 
 	return result, nil
 }
 
+func (s *Store) SelectNative(statement string, args []string) (interface{}, error) {
+	argsInput := make([]interface{}, len(args))
+	for i := range args {
+		argsInput[i] = args[i]
+	}
+
+	rows, err := s.BunInstance.Query(statement, argsInput...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	cols, err := rows.Columns()
+	if err != nil {
+		fmt.Println("Failed to get columns", err)
+		return nil, err
+	}
+
+	dest := make([]interface{}, len(cols))
+	rawResult := make([][]byte, len(cols))
+	result := []map[string]interface{}{}
+
+	for i, _ := range rawResult {
+		dest[i] = &rawResult[i] // Put pointers to each string in the interface slice
+	}
+
+	for rows.Next() {
+		err = rows.Scan(dest...)
+		if err != nil {
+			fmt.Println("Failed to scan row", err)
+			return nil, err
+		}
+
+		resultTemp := make(map[string]interface{})
+		for i, raw := range rawResult {
+			if raw == nil {
+				resultTemp[cols[i]] = "\\N"
+			} else {
+				resultTemp[cols[i]] = string(raw)
+			}
+		}
+
+		result = append(result, resultTemp)
+	}
+	return result, nil
+}
+
 func (s *Store) InitWasmDB() {
 	s.Instance.Exec("CREATE DATABASE states")
 	s.Instance.Exec("USE states")

@@ -99,6 +99,26 @@ func (s *RuntimeServer) Query(r *http.Request, params *types.RuntimeServerQuery,
 			BlockHeight: blockHeight,
 			Result:      hex.EncodeToString(result),
 		}
+	} else if params.FunctionName == "select_native_sql" {
+		res, err := s.Chain.WasmRuntime.RunSelectFunction(params.Args[0], params.Args[1:])
+
+		if err != nil {
+			*reply = types.ServerQueryReply{
+				BlockHash:   blockHash,
+				BlockHeight: blockHeight,
+				Result:      hex.EncodeToString([]byte(err.Error())),
+			}
+
+		} else {
+			result, _ := json.Marshal(res)
+
+			*reply = types.ServerQueryReply{
+				BlockHash:   blockHash,
+				BlockHeight: blockHeight,
+				Result:      hex.EncodeToString(result),
+			}
+		}
+
 	}
 
 	return nil

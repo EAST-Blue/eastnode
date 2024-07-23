@@ -11,10 +11,13 @@ import {
   insertRow,
   updateRows,
   deleteRows,
+  selectNative,
   getTxUTXOByBlockHeight,
   Table,
-} from "east-wasm-sdk/assembly";
-export { allocate } from "east-wasm-sdk/assembly/external";
+  toJsonArray,
+  JSON,
+} from "@east-bitcoin-lib/smartindex-sdk/assembly";
+export { allocate } from "@east-bitcoin-lib/smartindex-sdk/assembly/external";
 
 const ordinalsTable = new Table("ordinals", [
   new Column("id", "int64"),
@@ -28,7 +31,7 @@ export function init(): void {
 
 export function getOrdinal(id_ptr: i32): string {
   const id = ptrToString(id_ptr);
-  return ordinalsTable.select([new Column("id", id)]);
+  return ordinalsTable.select([new Column("id", id)]).toString();
 }
 
 // Testing functions
@@ -37,6 +40,14 @@ export function insertItemTest(): void {
     new Column("id", "0"),
     new Column("address", "bc1q0d4836j3ekmm9cz7v3kcf0sdsxtmzg4ttpu7dm"),
     new Column("value", "1000"),
+  ]);
+  ordinalsTable.insert([
+    new Column("id", "1"),
+    new Column(
+      "address",
+      "bc1pkskdm7qk0z4gr8cgy38ysa00gyftj364gmf3uruse80c6gzunf6s0ywcsh"
+    ),
+    new Column("value", "100"),
   ]);
 }
 
@@ -53,11 +64,10 @@ export function deleteItemTest(): void {
 
 export function selectItemTest(): void {
   const result = ordinalsTable.select([new Column("id", "0")]);
-  const jsonResult = toJson(result);
 
-  consoleLog(getResultFromJson(jsonResult, "id", "string"));
-  consoleLog(getResultFromJson(jsonResult, "address", "string"));
-  consoleLog(getResultFromJson(jsonResult, "value", "string"));
+  consoleLog(getResultFromJson(result, "id", "string"));
+  consoleLog(getResultFromJson(result, "address", "string"));
+  consoleLog(getResultFromJson(result, "value", "string"));
 }
 
 // Unit test purpose
@@ -78,4 +88,17 @@ export function processString(str_ptr: i32): void {
   const output = "output for " + input;
 
   valueReturn(output);
+}
+
+export function selectNativeTest(): void {
+  const ptr = selectNative("SELECT * from temp_ordinals", "[]");
+  const result = toJsonArray(ptrToString(ptr));
+  for (let i = 0; i < result.valueOf().length; i++) {
+    const jsonObj = result.valueOf()[i];
+    if (jsonObj.isObj) {
+      consoleLog(getResultFromJson(jsonObj as JSON.Obj, "id", "string"));
+      consoleLog(getResultFromJson(jsonObj as JSON.Obj, "address", "string"));
+      consoleLog(getResultFromJson(jsonObj as JSON.Obj, "value", "string"));
+    }
+  }
 }

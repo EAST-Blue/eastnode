@@ -97,7 +97,10 @@ func Select(s store.Store, contractAddress string, tableName string, whereCondit
 	return string(resultMarshalled), nil
 }
 
+func SelectNative(s store.Store, statement string, args []string) (any, error) {
+	return s.SelectNative(statement, args)
+}
+
 func getStateTableName(contractAddress string, tableName string) string {
 	return fmt.Sprintf("%s%s%s", contractAddress, ContractTableSeparator, tableName)
-
 }
