@@ -1,4 +1,5 @@
-import { consoleLog, valueReturn } from "./env";
+import { consoleLog, valueReturn, selectNative } from "./env";
+import { JSON } from "assemblyscript-json/assembly";
 import {
   Table,
   Column,
@@ -33,5 +34,7 @@ export {
   updateRows,
   deleteRows,
   getTxUTXOByBlockHeight,
-  getUTXOByTransactionHash
+  getUTXOByTransactionHash,
+  selectNative,
+  JSON
 };

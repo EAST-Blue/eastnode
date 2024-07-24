@@ -165,6 +165,29 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("selectItem").
 		NewFunctionBuilder().
+		WithFunc(func(statement int32, args int32) uint32 {
+			statementStr := ToString(r.Mod.Memory(), int64(statement))
+			argsStr := ToString(r.Mod.Memory(), int64(args))
+
+			var argsArray []string
+			json.Unmarshal([]byte(argsStr), &argsArray)
+
+			result, err := SelectNative(r.Store, statementStr, argsArray)
+			resultStr, err := json.Marshal(result)
+
+			if err != nil {
+				*errorMessage = err
+				ptr := r.writeString(r.Mod.Memory(), err.Error())
+
+				return uint32(ptr)
+			} else {
+				ptr := r.writeString(r.Mod.Memory(), string(resultStr))
+
+				return uint32(ptr)
+			}
+		}).
+		Export("selectNative").
+		NewFunctionBuilder().
 		WithFunc(func(height int64) uint32 {
 			result, err := r.IndexerDbRepo.GetBlockByHeight(height)
 			if err != nil {
@@ -279,4 +302,8 @@ func (r *WasmRuntime) RunWasmFunction(signer Address, wasmBytes []byte, smartInd
 	}
 
 	return output, nil
+}
+
+func (r *WasmRuntime) RunSelectFunction(statement string, args []string) (any, error) {
+	return r.Store.SelectNative(statement, args)
 }
