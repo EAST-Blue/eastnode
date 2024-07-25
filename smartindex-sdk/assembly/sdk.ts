@@ -51,6 +51,16 @@ export class Column {
   }
 }
 
+export class Transaction {
+  hash: string;
+  utxos: UTXO[];
+
+  constructor(hash: string, utxo: UTXO[]) {
+    this.hash = hash;
+    this.utxos = utxo;
+  }
+}
+
 export class UTXO {
   id: u64;
   value: u64;
@@ -240,7 +250,7 @@ export function getUTXOByTransactionHash(hash: string): UTXO[] {
   return UTXOs;
 }
 
-export function getTxUTXOByBlockHeight(block_height: u64): UTXO[] {
+export function getTxHashesByBlockHeight(block_height: u64): string[] {
   // Get Block
   const ptr = getBlockByHeight(block_height);
   const result = ptrToString(ptr);
@@ -262,7 +272,11 @@ export function getTxUTXOByBlockHeight(block_height: u64): UTXO[] {
       txHashes.push(txHash);
     }
   }
+  return txHashes;
+}
 
+export function getTxUTXOByBlockHeight(block_height: u64): UTXO[] {
+  const txHashes = getTxHashesByBlockHeight(block_height);
   // Get UTXOs
   let UTXOs: UTXO[] = [];
   for (let i = 0; i < txHashes.length; i++) {
@@ -270,4 +284,17 @@ export function getTxUTXOByBlockHeight(block_height: u64): UTXO[] {
     UTXOs = UTXOs.concat(jsonResultUtxos);
   }
   return UTXOs;
+}
+
+export function getTxsByBlockHeight(block_height: u64): Transaction[] {
+  const txHashes = getTxHashesByBlockHeight(block_height);
+
+  // Get UTXOs
+  let txs: Transaction[] = [];
+  for (let i = 0; i < txHashes.length; i++) {
+    const jsonResultUtxos = getUTXOByTransactionHash(txHashes[i]);
+    let UTXOs: UTXO[] = jsonResultUtxos;
+    txs.push(new Transaction(txHashes[i], UTXOs));
+  }
+  return txs;
 }

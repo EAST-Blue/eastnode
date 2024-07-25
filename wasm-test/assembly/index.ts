@@ -16,6 +16,7 @@ import {
   Table,
   toJsonArray,
   JSON,
+  getTxsByBlockHeight
 } from "@east-bitcoin-lib/smartindex-sdk/assembly";
 export { allocate } from "@east-bitcoin-lib/smartindex-sdk/assembly/external";
 
@@ -80,6 +81,18 @@ export function index(block_height_ptr: i32): void {
     consoleLog("p2shAsmScripts: " + utxos[i].p2shAsmScripts.join(" "));
     consoleLog("pkAsmScripts: " + utxos[i].pkAsmScripts.join(" "));
     consoleLog("witnessAsmScripts: " + utxos[i].witnessAsmScripts.join(" "));
+  }
+
+  const txs = getTxsByBlockHeight(block_height);
+
+  for (let i = 0; i < txs.length; i++) {
+    consoleLog("tx_hash: " + txs[i].hash);
+    for (let j = 0; j < txs[j].utxos.length; j++) {
+      consoleLog("tx.fundingTxHash: " + txs[i].utxos[j].fundingTxHash);
+      consoleLog("tx.p2shAsmScripts: " + txs[i].utxos[j].p2shAsmScripts.join(" "));
+      consoleLog("tx.pkAsmScripts: " + txs[i].utxos[j].pkAsmScripts.join(" "));
+      consoleLog("tx.witnessAsmScripts: " + txs[i].utxos[j].witnessAsmScripts.join(" "));
+    }
   }
 }
 

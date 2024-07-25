@@ -15,7 +15,8 @@ import {
   updateRows,
   deleteRows,
   getTxUTXOByBlockHeight,
-  getUTXOByTransactionHash
+  getUTXOByTransactionHash,
+  getTxsByBlockHeight
 } from "./sdk";
 export {
   consoleLog,
@@ -36,5 +37,6 @@ export {
   getTxUTXOByBlockHeight,
   getUTXOByTransactionHash,
   selectNative,
-  JSON
+  JSON,
+  getTxsByBlockHeight
 };
