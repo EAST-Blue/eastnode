@@ -74,7 +74,7 @@ func GetFakeInstance(instanceType InstanceType) *Store {
 				CREATE TABLE smart_index (
 					smart_index_address VARCHAR(255),
 					owner_address VARCHAR(255),
-					wasm_blob BLOB,
+					wasm_blob LONGBLOB,
 					primary key(smart_index_address)
 				);
 				CREATE TABLE transaction_logs (

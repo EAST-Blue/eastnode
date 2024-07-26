@@ -27,14 +27,14 @@ func (s *Store) InitChainDb() {
 				block_id BIGINT,
 				signer VARCHAR(255),
 				receiver VARCHAR(255),
-				actions BLOB,
+				actions LONGBLOB,
 				created_at BIGINT,
 				primary key(id)
 			);
 			CREATE TABLE smart_index (
 				smart_index_address VARCHAR(255),
 				owner_address VARCHAR(255),
-				wasm_blob BLOB,
+				wasm_blob LONGBLOB,
 				primary key(smart_index_address)
 			);
 			CREATE TABLE transaction_logs (
