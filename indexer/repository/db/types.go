@@ -50,7 +50,7 @@ type Transaction struct {
 	Safe     bool   `json:"safe"`
 
 	BlockID    uint   `json:"block_id"`
-	BlockHash  string `json:"block_hash"`
+	BlockHash  string `gorm:"index:idx_block_hash" json:"block_hash"`
 	BlockIndex uint32 `json:"block_index"`
 }
 
