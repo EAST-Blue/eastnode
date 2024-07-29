@@ -55,7 +55,7 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error 
 	// insert block
 	newBlock := db.Block{
 		Hash:          block.Hash,
-		Height:        blockHeight,
+		Height:        uint64(blockHeight),
 		PreviousBlock: block.Previousblockhash,
 		Version:       int32(block.Version),
 		Nonce:         uint32(block.Nonce),
@@ -71,14 +71,15 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error 
 	// insert transaction
 	// fill the txhash using txid instead of txhash, for the witness tx the id is different from the hash
 	// https://bitcoin.stackexchange.com/questions/77699/whats-the-difference-between-txid-and-hash-getrawtransaction-bitcoind
-	for idx, transaction := range block.Tx {
+	for txIdx, transaction := range block.Tx {
 		newTx := db.Transaction{
-			Hash:       transaction.Txid,
-			LockTime:   uint32(transaction.Locktime),
-			Version:    int32(transaction.Version),
-			Safe:       false,
-			BlockHash:  block.Hash,
-			BlockIndex: uint32(idx),
+			Hash:        transaction.Txid,
+			LockTime:    uint32(transaction.Locktime),
+			Version:     int32(transaction.Version),
+			Safe:        false,
+			BlockHash:   block.Hash,
+			BlockHeight: uint64(blockHeight),
+			BlockIndex:  uint32(txIdx),
 		}
 		err = i.DbRepo.CreateTransaction(&newTx)
 		if err != nil {
@@ -88,13 +89,18 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error 
 		// insert outpoints
 
 		// vouts
-		for idxx, vout := range transaction.Vout {
+		for voutIdx, vout := range transaction.Vout {
+			// convert btc value into sat, 1 btc is 100_000_000 sats
+			satValue := int64(vout.Value * 100_000_000)
 			err = i.DbRepo.CreateOutpoint(&db.OutPoint{
-				FundingTxHash:  transaction.Txid,
-				FundingTxIndex: uint32(idxx),
-				PkScript:       vout.ScriptPubKey.Hex,
-				Value:          int64(vout.Value),
-				Spender:        vout.ScriptPubKey.Address,
+				FundingTxHash:       transaction.Txid,
+				FundingTxIndex:      uint32(voutIdx),
+				FundingBlockHash:    block.Hash,
+				FundingBlockHeight:  uint64(blockHeight),
+				FundingBlockTxIndex: uint32(txIdx),
+				PkScript:            vout.ScriptPubKey.Hex,
+				Value:               satValue,
+				Spender:             vout.ScriptPubKey.Address,
 			})
 			if err != nil {
 				return err
@@ -106,11 +112,14 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error 
 			// coinbase
 			if vin.Coinbase != "" {
 				err = i.DbRepo.CreateOutpoint(&db.OutPoint{
-					SpendingTxHash:  transaction.Txid,
-					SpendingTxIndex: uint32(idxx),
-					Sequence:        uint32(vin.Sequence),
-					SignatureScript: vin.ScriptSig.Hex,
-					Witness:         strings.Join(vin.Txinwitness, ","),
+					SpendingTxHash:       transaction.Txid,
+					SpendingTxIndex:      uint32(idxx),
+					SpendingBlockHash:    block.Hash,
+					SpendingBlockHeight:  uint64(blockHeight),
+					SpendingBlockTxIndex: uint32(txIdx),
+					Sequence:             uint32(vin.Sequence),
+					SignatureScript:      vin.ScriptSig.Hex,
+					Witness:              strings.Join(vin.Txinwitness, ","),
 
 					FundingTxHash:  vin.Txid,
 					FundingTxIndex: uint32(vin.Vout),
@@ -125,11 +134,14 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error 
 				PreviousTxHash:  vin.Txid,
 				PreviousTxIndex: uint32(vin.Vout),
 
-				SpendingTxHash:  transaction.Txid,
-				SpendingTxIndex: uint32(idxx),
-				Sequence:        uint32(vin.Sequence),
-				SignatureScript: vin.ScriptSig.Hex,
-				Witness:         strings.Join(vin.Txinwitness, ","),
+				SpendingTxHash:       transaction.Txid,
+				SpendingTxIndex:      uint32(idxx),
+				SpendingBlockHash:    block.Hash,
+				SpendingBlockHeight:  uint64(blockHeight),
+				SpendingBlockTxIndex: uint32(txIdx),
+				Sequence:             uint32(vin.Sequence),
+				SignatureScript:      vin.ScriptSig.Hex,
+				Witness:              strings.Join(vin.Txinwitness, ","),
 			})
 			if err != nil {
 				return err

@@ -55,8 +55,8 @@ type GetBlock struct {
 			} `json:"scriptSig"`
 		} `json:"vin"`
 		Vout []struct {
-			Value        int `json:"value"`
-			N            int `json:"n"`
+			Value        float64 `json:"value"`
+			N            int     `json:"n"`
 			ScriptPubKey struct {
 				Asm     string `json:"asm"`
 				Desc    string `json:"desc"`
