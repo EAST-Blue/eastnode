@@ -80,7 +80,8 @@ func GetFakeInstance(instanceType InstanceType) *Store {
 				CREATE TABLE transaction_logs (
 					id VARCHAR(255),
 					statuses JSON,
-					logs JSON
+					logs JSON,
+					primary key(id)
 				);
 				CALL DOLT_COMMIT('-Am', 'init core schema');
 			`)
