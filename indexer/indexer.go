@@ -5,7 +5,10 @@ import (
 	"eastnode/indexer/repository/db"
 	"errors"
 	"log"
+	"os"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type Indexer struct {
@@ -41,6 +44,13 @@ func (i *Indexer) IndexBlocks(fromBlockHeight int32, toBlockHeight int32) error 
 		if err != nil {
 			return err
 		}
+
+		i, err := strconv.Atoi(os.Getenv("INDEXER_SLEEP_TIME"))
+		if err != nil {
+			return err
+		}
+
+		time.Sleep(time.Duration(i) * time.Millisecond)
 
 		blockHeight++
 		blockHash = block.Nextblockhash
