@@ -64,13 +64,17 @@ export class Transaction {
 export class UTXO {
   id: u64;
   value: u64;
-  spendingTxId: string;
   spendingTxHash: string;
   spendingTxIndex: string;
+  spendingBlockHash: string;
+  spendingBlockHeight: string;
+  spendingBlockTxIndex: string;
   sequence: u64;
-  fundingTxId: string;
   fundingTxHash: string;
   fundingTxIndex: string;
+  fundingBlockHash: string;
+  fundingBlockHeight: string;
+  fundingBlockTxIndex: string;
   signatureScript: string;
   pkScript: string;
   witness: string;
@@ -83,13 +87,17 @@ export class UTXO {
   constructor(
     id: string,
     value: string,
-    spendingTxId: string,
     spendingTxHash: string,
     spendingTxIndex: string,
+    spendingBlockHash: string,
+    spendingBlockHeight: string,
+    spendingBlockTxIndex: string,
     sequence: string,
-    fundingTxId: string,
     fundingTxHash: string,
     fundingTxIndex: string,
+    fundingBlockHash: string,
+    fundingBlockHeight: string,
+    fundingBlockTxIndex: string,
     signatureScript: string,
     pkScript: string,
     witness: string,
@@ -101,13 +109,17 @@ export class UTXO {
   ) {
     this.id = u64(parseInt(id));
     this.value = u64(parseInt(value));
-    this.spendingTxId = spendingTxId;
     this.spendingTxHash = spendingTxHash;
     this.spendingTxIndex = spendingTxIndex;
+    this.spendingBlockHash = spendingBlockHash;
+    this.spendingBlockHeight = spendingBlockHeight;
+    this.spendingBlockTxIndex = spendingBlockTxIndex;
     this.sequence = u64(parseInt(sequence));
-    this.fundingTxId = fundingTxId;
     this.fundingTxHash = fundingTxHash;
     this.fundingTxIndex = fundingTxIndex;
+    this.fundingBlockHash = fundingBlockHash;
+    this.fundingBlockHeight = fundingBlockHeight;
+    this.fundingBlockTxIndex = fundingBlockTxIndex;
     this.signatureScript = signatureScript;
     this.pkScript = pkScript;
     this.witness = witness;
@@ -227,13 +239,41 @@ export function getUTXOByTransactionHash(hash: string): UTXO[] {
         new UTXO(
           getResultFromJson(jsonObj as JSON.Obj, "id", "int64"),
           getResultFromJson(jsonObj as JSON.Obj, "value", "int64"),
-          getResultFromJson(jsonObj as JSON.Obj, "spending_tx_id", "int64"),
           getResultFromJson(jsonObj as JSON.Obj, "spending_tx_hash", "string"),
           getResultFromJson(jsonObj as JSON.Obj, "spending_tx_index", "int64"),
+          getResultFromJson(
+            jsonObj as JSON.Obj,
+            "spending_block_hash",
+            "string"
+          ),
+          getResultFromJson(
+            jsonObj as JSON.Obj,
+            "spending_block_height",
+            "int64"
+          ),
+          getResultFromJson(
+            jsonObj as JSON.Obj,
+            "spending_block_tx_index",
+            "int64"
+          ),
           getResultFromJson(jsonObj as JSON.Obj, "sequence", "int64"),
-          getResultFromJson(jsonObj as JSON.Obj, "funding_tx_id", "int64"),
           getResultFromJson(jsonObj as JSON.Obj, "funding_tx_hash", "string"),
           getResultFromJson(jsonObj as JSON.Obj, "funding_tx_index", "int64"),
+          getResultFromJson(
+            jsonObj as JSON.Obj,
+            "funding_block_hash",
+            "string"
+          ),
+          getResultFromJson(
+            jsonObj as JSON.Obj,
+            "funding_block_height",
+            "int64"
+          ),
+          getResultFromJson(
+            jsonObj as JSON.Obj,
+            "funding_block_tx_index",
+            "int64"
+          ),
           getResultFromJson(jsonObj as JSON.Obj, "signature_script", "string"),
           getResultFromJson(jsonObj as JSON.Obj, "pk_script", "string"),
           getResultFromJson(jsonObj as JSON.Obj, "witness", "string"),

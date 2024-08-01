@@ -176,24 +176,28 @@ func (d *DBRepository) CreateOutpointWithTx(tx *gorm.DB, outpoint *OutPoint) err
 
 func (d *DBRepository) UpdateOutpointSpending(data *UpdateOutpointSpendingData) error {
 	res := d.Db.Where("`funding_tx_hash` = ? AND `funding_tx_index` = ?", data.PreviousTxHash, data.PreviousTxIndex).Model(OutPoint{}).Updates(map[string]interface{}{
-		"spending_tx_id":    data.SpendingTxID,
-		"spending_tx_hash":  data.SpendingTxHash,
-		"spending_tx_index": data.SpendingTxIndex,
-		"sequence":          data.Sequence,
-		"signature_script":  data.SignatureScript,
-		"witness":           data.Witness,
+		"spending_tx_hash":        data.SpendingTxHash,
+		"spending_tx_index":       data.SpendingTxIndex,
+		"spending_block_hash":     data.SpendingBlockHash,
+		"spending_block_height":   data.SpendingBlockHeight,
+		"spending_block_tx_index": data.SpendingBlockTxIndex,
+		"sequence":                data.Sequence,
+		"signature_script":        data.SignatureScript,
+		"witness":                 data.Witness,
 	})
 	return res.Error
 }
 
 func (d *DBRepository) UpdateOutpointSpendingWithTx(tx *gorm.DB, data *UpdateOutpointSpendingData) error {
 	res := tx.Where("`funding_tx_hash` = ? AND `funding_tx_index` = ?", data.PreviousTxHash, data.PreviousTxIndex).Model(OutPoint{}).Updates(map[string]interface{}{
-		"spending_tx_id":    data.SpendingTxID,
-		"spending_tx_hash":  data.SpendingTxHash,
-		"spending_tx_index": data.SpendingTxIndex,
-		"sequence":          data.Sequence,
-		"signature_script":  data.SignatureScript,
-		"witness":           data.Witness,
+		"spending_tx_hash":        data.SpendingTxHash,
+		"spending_tx_index":       data.SpendingTxIndex,
+		"spending_block_hash":     data.SpendingBlockHash,
+		"spending_block_height":   data.SpendingBlockHeight,
+		"spending_block_tx_index": data.SpendingBlockTxIndex,
+		"sequence":                data.Sequence,
+		"signature_script":        data.SignatureScript,
+		"witness":                 data.Witness,
 	})
 	return res.Error
 }
@@ -217,7 +221,7 @@ func (d *DBRepository) GetTransactionsByBlockHash(blockHash string) ([]*Transact
 
 func (d *DBRepository) GetOutpointsByTransactionHash(transactionHash string) ([]*OutPoint, error) {
 	outpoints := []*OutPoint{}
-	if resp := d.Db.Where("spending_tx_hash = ? OR funding_tx_hash = ?", transactionHash, transactionHash).Find(&outpoints); resp.Error != nil {
+	if resp := d.Db.Order("spending_tx_index asc").Order("funding_tx_index asc").Where("spending_tx_hash = ? OR funding_tx_hash = ?", transactionHash, transactionHash).Find(&outpoints); resp.Error != nil {
 		return nil, resp.Error
 	}
 
