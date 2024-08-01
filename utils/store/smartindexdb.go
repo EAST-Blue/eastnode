@@ -48,7 +48,7 @@ func (s *Store) Update(model interface{}, tableName string, whereCondition map[s
 	whereConditionStr := ""
 	for k, v := range whereCondition {
 		if len(whereConditionStr) > 1 {
-			whereConditionStr = whereConditionStr + " and"
+			whereConditionStr = whereConditionStr + " and "
 		}
 		whereConditionStr = whereConditionStr + fmt.Sprintf("%s = \"%s\"", k, v)
 	}
@@ -72,7 +72,7 @@ func (s *Store) Delete(tableName string, whereCondition map[string]interface{}) 
 	whereConditionStr := ""
 	for k, v := range whereCondition {
 		if len(whereConditionStr) > 1 {
-			whereConditionStr = whereConditionStr + " and"
+			whereConditionStr = whereConditionStr + " and "
 		}
 		whereConditionStr = whereConditionStr + fmt.Sprintf("%s = \"%s\"", k, v)
 	}
@@ -95,7 +95,7 @@ func (s *Store) Select(tableName string, whereCondition map[string]interface{}) 
 	whereConditionStr := ""
 	for k, v := range whereCondition {
 		if len(whereConditionStr) > 1 {
-			whereConditionStr = whereConditionStr + " and"
+			whereConditionStr = whereConditionStr + " and "
 		}
 		whereConditionStr = whereConditionStr + fmt.Sprintf("%s = \"%s\"", k, v)
 	}
