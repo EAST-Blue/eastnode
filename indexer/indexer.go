@@ -157,21 +157,23 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error 
 
 		// vins
 		for idxx, vin := range transaction.Vin {
-			err = i.DbRepo.UpdateOutpointSpending(&db.UpdateOutpointSpendingData{
-				PreviousTxHash:  vin.Txid,
-				PreviousTxIndex: uint32(vin.Vout),
+			if vin.Coinbase == "" {
+				err = i.DbRepo.UpdateOutpointSpending(&db.UpdateOutpointSpendingData{
+					PreviousTxHash:  vin.Txid,
+					PreviousTxIndex: uint32(vin.Vout),
 
-				SpendingTxHash:       transaction.Txid,
-				SpendingTxIndex:      uint32(idxx),
-				SpendingBlockHash:    block.Hash,
-				SpendingBlockHeight:  uint64(blockHeight),
-				SpendingBlockTxIndex: uint32(txIdx),
-				Sequence:             uint32(vin.Sequence),
-				SignatureScript:      vin.ScriptSig.Hex,
-				Witness:              strings.Join(vin.Txinwitness, ","),
-			})
-			if err != nil {
-				return err
+					SpendingTxHash:       transaction.Txid,
+					SpendingTxIndex:      uint32(idxx),
+					SpendingBlockHash:    block.Hash,
+					SpendingBlockHeight:  uint64(blockHeight),
+					SpendingBlockTxIndex: uint32(txIdx),
+					Sequence:             uint32(vin.Sequence),
+					SignatureScript:      vin.ScriptSig.Hex,
+					Witness:              strings.Join(vin.Txinwitness, ","),
+				})
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
