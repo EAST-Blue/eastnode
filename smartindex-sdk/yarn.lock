@@ -486,10 +486,9 @@ asbuild@^0.2.0:
     eslint "^7.17.0"
     yargs "^15.4.1"
 
-assemblyscript-json@^1.1.0:
+"assemblyscript-json@https://github.com/near/assemblyscript-json#main":
   version "1.1.0"
-  resolved "https://registry.yarnpkg.com/assemblyscript-json/-/assemblyscript-json-1.1.0.tgz#49d38bc21f1ac36f2887528a35de6cf7d59c17be"
-  integrity sha512-UbE8ts8csTWQgd5TnSPN7MRV9NveuHv1bVnKmDLoo/tzjqxkmsZb3lu59Uk8H7SGoqdkDSEE049alx/nHnSdFw==
+  resolved "https://github.com/near/assemblyscript-json#1edab439e33acd787671618d33c1ec4250f523c9"
 
 assemblyscript@^0.18.31:
   version "0.18.32"
