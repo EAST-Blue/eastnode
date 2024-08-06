@@ -13,6 +13,10 @@ import (
 )
 
 func GetFakeInstance(instanceType InstanceType) *Store {
+	return GetFakeInstanceCustom(instanceType, "../utils/store/test/doltdump.sql")
+}
+
+func GetFakeInstanceCustom(instanceType InstanceType, dumpFile string) *Store {
 	if instanceType == SmartIndexDB && sSmartIndex != nil {
 		return sSmartIndex
 	} else if instanceType == ChainDB && sChain != nil {
@@ -32,7 +36,7 @@ func GetFakeInstance(instanceType InstanceType) *Store {
 			sSmartIndex = &Store{Instance: doltInstance}
 
 			if _, err := os.Stat(utils.Cwd() + "/db_test/indexer"); os.IsNotExist(err) {
-				dump, _ := os.ReadFile("../utils/store/test/doltdump.sql")
+				dump, _ := os.ReadFile(dumpFile)
 
 				_, err = sSmartIndex.Instance.Exec(string(dump))
 				if err != nil {
