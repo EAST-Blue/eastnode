@@ -34,6 +34,7 @@ type Chain struct {
 }
 
 func (c *Chain) Init(indexerDbRepo *indexerDb.DBRepository) *Chain {
+
 	c.Store = store.GetInstance(store.ChainDB)
 
 	c.Mempool = new(Mempool)
@@ -41,7 +42,7 @@ func (c *Chain) Init(indexerDbRepo *indexerDb.DBRepository) *Chain {
 
 	c.WasmRuntime = &runtime.WasmRuntime{Store: *store.GetInstance(store.SmartIndexDB), IndexerDbRepo: indexerDbRepo}
 
-	log.Println("[+] chain initialized")
+	log.Printf("[+] chain initialized")
 
 	c.ProduceBlock()
 

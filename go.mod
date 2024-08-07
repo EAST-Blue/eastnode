@@ -19,6 +19,7 @@ require (
 
 require (
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/libsv/go-bk v0.1.6 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 )
