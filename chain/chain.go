@@ -34,8 +34,7 @@ type Chain struct {
 }
 
 func (c *Chain) Init(indexerDbRepo *indexerDb.DBRepository) *Chain {
-	t1 := time.Now()
-	log.Println("chain initializing")
+
 	c.Store = store.GetInstance(store.ChainDB)
 
 	c.Mempool = new(Mempool)
@@ -43,8 +42,7 @@ func (c *Chain) Init(indexerDbRepo *indexerDb.DBRepository) *Chain {
 
 	c.WasmRuntime = &runtime.WasmRuntime{Store: *store.GetInstance(store.SmartIndexDB), IndexerDbRepo: indexerDbRepo}
 
-	tDiff := time.Since(t1)
-	log.Printf("[+] chain initialized in %s", tDiff)
+	log.Printf("[+] chain initialized")
 
 	c.ProduceBlock()
 
