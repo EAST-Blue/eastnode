@@ -3,7 +3,7 @@ package bitcoin
 import (
 	"bytes"
 
-	// "encoding/base64"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,11 +20,11 @@ func NewBitcoinRepo(url, username, password string) *BitcoinRepository {
 	return &BitcoinRepository{url, username, password}
 }
 
-// func (b *BitcoinRepository) authorization() string {
-// 	str := b.username + ":" + b.password
-// 	encoded := base64.StdEncoding.EncodeToString([]byte(str))
-// 	return "Basic " + encoded
-// }
+func (b *BitcoinRepository) authorization() string {
+	str := b.username + ":" + b.password
+	encoded := base64.StdEncoding.EncodeToString([]byte(str))
+	return "Basic " + encoded
+}
 
 func (b *BitcoinRepository) rpc(method string, params []json.RawMessage) ([]byte, error) {
 	request := &Request{
@@ -39,7 +39,9 @@ func (b *BitcoinRepository) rpc(method string, params []json.RawMessage) ([]byte
 		return nil, err
 	}
 
-	// r.Header.Add("Authorization", b.authorization())
+	if b.username != "" && b.password != "" {
+		r.Header.Add("Authorization", b.authorization())
+	}
 	r.Header.Add("Content-Type", "application/json")
 
 	c := &http.Client{}
