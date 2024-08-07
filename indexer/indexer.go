@@ -4,6 +4,7 @@ import (
 	"eastnode/indexer/repository/bitcoin"
 	"eastnode/indexer/repository/db"
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 )
@@ -42,8 +43,12 @@ func (i *Indexer) IndexBlocks(fromBlockHeight int32, toBlockHeight int32) error 
 			return err
 		}
 
+		commitMessage := fmt.Sprintf("Indexed block %d", blockHeight)
+		i.DbRepo.Db.Exec("CALL DOLT_COMMIT('--allow-empty', '-Am', ?);", commitMessage)
+
 		blockHeight++
 		blockHash = block.Nextblockhash
+
 	}
 
 	return nil
