@@ -2,6 +2,7 @@ package bitcoin
 
 import (
 	"bytes"
+
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -38,7 +39,9 @@ func (b *BitcoinRepository) rpc(method string, params []json.RawMessage) ([]byte
 		return nil, err
 	}
 
-	r.Header.Add("Authorization", b.authorization())
+	if b.username != "" && b.password != "" {
+		r.Header.Add("Authorization", b.authorization())
+	}
 	r.Header.Add("Content-Type", "application/json")
 
 	c := &http.Client{}
@@ -77,7 +80,7 @@ func (b *BitcoinRepository) GetBlockHash(height int32) (string, error) {
 
 func (b *BitcoinRepository) GetBlock(blockHash string) (*GetBlock, error) {
 	blockHashParam, _ := json.Marshal(blockHash)
-	verbosity, _ := json.Marshal(2)
+	verbosity, _ := json.Marshal(3)
 	paramsJson := []json.RawMessage{json.RawMessage(blockHashParam), json.RawMessage(verbosity)}
 
 	resBytes, err := b.rpc("getblock", paramsJson)

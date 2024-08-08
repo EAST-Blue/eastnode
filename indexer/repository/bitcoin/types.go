@@ -53,6 +53,16 @@ type GetBlock struct {
 				Asm string `json:"asm"`
 				Hex string `json:"hex"`
 			} `json:"scriptSig"`
+			PrevOutput struct {
+				Value        float64 `json:"value"`
+				ScriptPubKey struct {
+					Asm     string `json:"asm"`
+					Desc    string `json:"desc"`
+					Hex     string `json:"hex"`
+					Address string `json:"address"`
+					Type    string `json:"type"`
+				} `json:"scriptPubKey"`
+			} `json:"prevout"`
 		} `json:"vin"`
 		Vout []struct {
 			Value        float64 `json:"value"`

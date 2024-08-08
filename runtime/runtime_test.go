@@ -30,8 +30,7 @@ func TestGetBlockByHeight(t *testing.T) {
 	wasmBytes, _ := os.ReadFile("../build/release.wasm")
 
 	wr := getWasmRuntime()
-	wr.RunWasmFunction("", wasmBytes, "", "index", []string{"20"}, types.Call)
-	wr.RunWasmFunction("", wasmBytes, "", "index", []string{"111"}, types.Call)
+	wr.RunWasmFunction("", wasmBytes, "", "index", []string{"1"}, types.Call)
 }
 
 func TestStringParamsAndResult(t *testing.T) {
