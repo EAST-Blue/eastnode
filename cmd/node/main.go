@@ -5,6 +5,8 @@ import (
 	"eastnode/indexer/repository/bitcoin"
 	indexerDb "eastnode/indexer/repository/db"
 	storeDB "eastnode/utils/store"
+	"os"
+	"time"
 
 	"eastnode/chain"
 	"eastnode/jsonrpc"
@@ -15,11 +17,19 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	// indexer
-	bitcoinRepo := bitcoin.NewBitcoinRepo("http://localhost:18443", "east", "east")
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	t1 := time.Now()
+	log.Println("Initializing...")
+
+	bitcoinRepo := bitcoin.NewBitcoinRepo(os.Getenv("BTC_RPC_URL"), "east", "east")
 	s := storeDB.GetInstance(storeDB.IndexerDB)
 	indexerDbRepo := indexerDb.NewDBRepository(s.Gorm)
 	indexerRepo := indexer.NewIndexer(indexerDbRepo, bitcoinRepo)
@@ -52,7 +62,10 @@ func main() {
 	router.Handle("/", rpcServer)
 
 	log.Println("rpc is running")
-	err := http.ListenAndServe(":4000", router)
+	tDiff := time.Since(t1)
+	log.Printf("node up and running in %s", tDiff)
+
+	err = http.ListenAndServe(":4000", router)
 	if err != nil {
 		panic(err)
 	}
