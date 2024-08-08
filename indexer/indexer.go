@@ -4,6 +4,7 @@ import (
 	"eastnode/indexer/repository/bitcoin"
 	"eastnode/indexer/repository/db"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -45,6 +46,9 @@ func (i *Indexer) IndexBlocks(fromBlockHeight int32, toBlockHeight int32) error 
 			return err
 		}
 
+		commitMessage := fmt.Sprintf("Indexed block %d", blockHeight)
+		i.DbRepo.Db.Exec("CALL DOLT_COMMIT('--allow-empty', '-Am', ?);", commitMessage)
+
 		i, err := strconv.Atoi(os.Getenv("INDEXER_SLEEP_TIME"))
 		if err != nil {
 			return err
@@ -54,6 +58,7 @@ func (i *Indexer) IndexBlocks(fromBlockHeight int32, toBlockHeight int32) error 
 
 		blockHeight++
 		blockHash = block.Nextblockhash
+
 	}
 
 	return nil
