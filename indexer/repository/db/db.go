@@ -167,6 +167,15 @@ func (d *DBRepository) CreateTransactions(transactions *[]Transaction) error {
 	return err
 }
 
+func (d *DBRepository) CreateBlocks(blocks *[]Block) error {
+	err := d.Db.Clauses(clause.OnConflict{DoNothing: true}).CreateInBatches(blocks, 1024).Error
+	if err == gorm.ErrDuplicatedKey {
+		return nil
+	}
+
+	return err
+}
+
 func (d *DBRepository) CreateTransactionWithTx(tx *gorm.DB, transaction *Transaction) error {
 	return tx.Create(transaction).Error
 }
