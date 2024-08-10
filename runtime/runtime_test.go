@@ -12,7 +12,7 @@ import (
 )
 
 func getWasmRuntime() *WasmRuntime {
-	instance := utils.GetFakeInstance(utils.SmartIndexDB)
+	instance := utils.GetFakeInstance(utils.SmartIndexDB, "../utils/store/test/doltdump.sql")
 	indexerDbRepo := indexerDb.NewDBRepository(instance.Gorm)
 	wr := &WasmRuntime{Store: *instance, IndexerDbRepo: indexerDbRepo}
 
