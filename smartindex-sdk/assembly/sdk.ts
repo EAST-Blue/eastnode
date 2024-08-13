@@ -1,5 +1,6 @@
 import { JSON } from "assemblyscript-json/assembly";
 import {
+  contractAddress,
   createTable,
   deleteItem,
   getBlockByHeight,
@@ -337,4 +338,8 @@ export function getTxsByBlockHeight(block_height: u64): Transaction[] {
     txs.push(new Transaction(txHashes[i], UTXOs));
   }
   return txs;
+}
+
+export function getContractAddress(): string {
+  return  ptrToString(contractAddress());
 }

@@ -237,6 +237,13 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("valueReturn").
 		NewFunctionBuilder().
+		WithFunc(func() uint32 {
+			ptr := r.writeString(r.Mod.Memory(), string(smartIndexAddress))
+
+			return uint32(ptr)
+		}).
+		Export("contractAddress").
+		NewFunctionBuilder().
 		WithFunc(func(strPtr int32) {
 			str := ToString(r.Mod.Memory(), int64(strPtr))
 
