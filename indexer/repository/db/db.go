@@ -6,6 +6,7 @@ import (
 
 	"github.com/libsv/go-bt/v2/bscript"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type DBRepository struct {
@@ -157,11 +158,29 @@ func (d *DBRepository) CreateTransaction(transaction *Transaction) error {
 	return err
 }
 
+func (d *DBRepository) CreateTransactions(transactions *[]Transaction) error {
+	err := d.Db.Clauses(clause.OnConflict{DoNothing: true}).CreateInBatches(transactions, 1024).Error
+	if err == gorm.ErrDuplicatedKey {
+		return nil
+	}
+
+	return err
+}
+
+func (d *DBRepository) CreateBlocks(blocks *[]Block) error {
+	err := d.Db.Clauses(clause.OnConflict{DoNothing: true}).CreateInBatches(blocks, 1024).Error
+	if err == gorm.ErrDuplicatedKey {
+		return nil
+	}
+
+	return err
+}
+
 func (d *DBRepository) CreateTransactionWithTx(tx *gorm.DB, transaction *Transaction) error {
 	return tx.Create(transaction).Error
 }
 
-func (d *DBRepository) CreateOutpoint(outpoint *OutPoint) error {
+func (d *DBRepository) CreateVin(outpoint *Vin) error {
 	err := d.Db.Create(outpoint).Error
 	if err == gorm.ErrDuplicatedKey {
 		return nil
@@ -170,36 +189,39 @@ func (d *DBRepository) CreateOutpoint(outpoint *OutPoint) error {
 	return err
 }
 
-func (d *DBRepository) CreateOutpointWithTx(tx *gorm.DB, outpoint *OutPoint) error {
+func (d *DBRepository) CreateVins(outpoints *[]Vin) error {
+	err := d.Db.CreateInBatches(outpoints, 1024).Error
+	if err == gorm.ErrDuplicatedKey {
+		return nil
+	}
+
+	return err
+}
+
+func (d *DBRepository) CreateVinWithTx(tx *gorm.DB, outpoint *Vin) error {
 	return tx.Create(outpoint).Error
 }
 
-func (d *DBRepository) UpdateOutpointSpending(data *UpdateOutpointSpendingData) error {
-	res := d.Db.Where("`funding_tx_hash` = ? AND `funding_tx_index` = ?", data.PreviousTxHash, data.PreviousTxIndex).Model(OutPoint{}).Updates(map[string]interface{}{
-		"spending_tx_hash":        data.SpendingTxHash,
-		"spending_tx_index":       data.SpendingTxIndex,
-		"spending_block_hash":     data.SpendingBlockHash,
-		"spending_block_height":   data.SpendingBlockHeight,
-		"spending_block_tx_index": data.SpendingBlockTxIndex,
-		"sequence":                data.Sequence,
-		"signature_script":        data.SignatureScript,
-		"witness":                 data.Witness,
-	})
-	return res.Error
+func (d *DBRepository) CreateVout(outpoint *Vout) error {
+	err := d.Db.Create(outpoint).Error
+	if err == gorm.ErrDuplicatedKey {
+		return nil
+	}
+
+	return err
 }
 
-func (d *DBRepository) UpdateOutpointSpendingWithTx(tx *gorm.DB, data *UpdateOutpointSpendingData) error {
-	res := tx.Where("`funding_tx_hash` = ? AND `funding_tx_index` = ?", data.PreviousTxHash, data.PreviousTxIndex).Model(OutPoint{}).Updates(map[string]interface{}{
-		"spending_tx_hash":        data.SpendingTxHash,
-		"spending_tx_index":       data.SpendingTxIndex,
-		"spending_block_hash":     data.SpendingBlockHash,
-		"spending_block_height":   data.SpendingBlockHeight,
-		"spending_block_tx_index": data.SpendingBlockTxIndex,
-		"sequence":                data.Sequence,
-		"signature_script":        data.SignatureScript,
-		"witness":                 data.Witness,
-	})
-	return res.Error
+func (d *DBRepository) CreateVouts(outpoints *[]Vout) error {
+	err := d.Db.CreateInBatches(outpoints, 1024).Error
+	if err == gorm.ErrDuplicatedKey {
+		return nil
+	}
+
+	return err
+}
+
+func (d *DBRepository) CreateVoutWithTx(tx *gorm.DB, outpoint *Vout) error {
+	return tx.Create(outpoint).Error
 }
 
 func (d *DBRepository) GetBlockByHeight(height int64) (*Block, error) {
@@ -221,13 +243,57 @@ func (d *DBRepository) GetTransactionsByBlockHash(blockHash string) ([]*Transact
 
 func (d *DBRepository) GetOutpointsByTransactionHash(transactionHash string) ([]*OutPoint, error) {
 	outpoints := []*OutPoint{}
-	if resp := d.Db.Order("spending_tx_index asc").Order("funding_tx_index asc").Where("spending_tx_hash = ? OR funding_tx_hash = ?", transactionHash, transactionHash).Find(&outpoints); resp.Error != nil {
+
+	// find and merge vin and vout
+	vins := []*Vin{}
+	vouts := []*Vout{}
+	if resp := d.Db.Order("tx_index asc").Where("tx_hash = ? ", transactionHash).Find(&vins); resp.Error != nil {
 		return nil, resp.Error
+	}
+
+	if resp := d.Db.Order("tx_index asc").Where("tx_hash = ? ", transactionHash).Find(&vouts); resp.Error != nil {
+		return nil, resp.Error
+	}
+
+	for _, outpoint := range vins {
+		outpoints = append(outpoints, &OutPoint{
+			SpendingTxHash:       outpoint.TxHash,
+			SpendingTxIndex:      outpoint.TxIndex,
+			SpendingBlockHash:    outpoint.BlockHash,
+			SpendingBlockHeight:  outpoint.BlockHeight,
+			SpendingBlockTxIndex: outpoint.BlockTxIndex,
+			Sequence:             outpoint.Sequence,
+			SignatureScript:      outpoint.SignatureScript,
+			Witness:              outpoint.Witness,
+			PkScript:             outpoint.PkScript,
+			Value:                outpoint.Value,
+			Spender:              outpoint.Spender,
+			Type:                 outpoint.Type,
+			P2shAsmScripts:       outpoint.P2shAsmScripts,
+			PkAsmScripts:         outpoint.PkAsmScripts,
+			WitnessAsmScripts:    outpoint.WitnessAsmScripts,
+		})
+	}
+
+	for _, outpoint := range vouts {
+		outpoints = append(outpoints, &OutPoint{
+			FundingTxHash:       outpoint.TxHash,
+			FundingTxIndex:      outpoint.TxIndex,
+			FundingBlockHash:    outpoint.BlockHash,
+			FundingBlockHeight:  outpoint.BlockHeight,
+			FundingBlockTxIndex: outpoint.BlockTxIndex,
+			PkScript:            outpoint.PkScript,
+			Value:               outpoint.Value,
+			Spender:             outpoint.Spender,
+			Type:                outpoint.Type,
+			P2shAsmScripts:      outpoint.P2shAsmScripts,
+			PkAsmScripts:        outpoint.PkAsmScripts,
+		})
 	}
 
 	// TODO: handle these errors
 	for i, v := range outpoints {
-		if v.Type == "scripthash" && v.SignatureScript != "" {
+		if v.SignatureScript != "" {
 			scripts, err := ParseP2shSigHexToAsms(v.SignatureScript)
 			if err == nil {
 				outpoints[i].P2shAsmScripts = scripts
