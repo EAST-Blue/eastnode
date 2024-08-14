@@ -16,6 +16,8 @@ import {
   Table,
   toJsonArray,
   JSON,
+  getTxsByBlockHeight,
+  getContractAddress
 } from "@east-bitcoin-lib/smartindex-sdk/assembly";
 export { allocate } from "@east-bitcoin-lib/smartindex-sdk/assembly/external";
 
@@ -102,4 +104,9 @@ export function selectNativeTest(): void {
       consoleLog(getResultFromJson(jsonObj as JSON.Obj, "value", "string"));
     }
   }
+}
+
+export function testGetContractAddress(): void {
+  const contractAddress = getContractAddress();
+  valueReturn("contract address: " + contractAddress);
 }

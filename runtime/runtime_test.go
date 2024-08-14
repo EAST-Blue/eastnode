@@ -65,3 +65,18 @@ func TestRunSelectFunction(t *testing.T) {
 	// selectNative can also be used from cross-index
 	wr.RunWasmFunction("", wasmBytes, "temp", "selectNativeTest", []string{}, types.Call)
 }
+
+func TestRunGetContractAddress(t *testing.T) {
+	defer t.Cleanup(clearRuntimeTest)
+	wasmBytes, _ := os.ReadFile("../build/release.wasm")
+	wr := getWasmRuntime()
+	output, err := wr.RunWasmFunction("", wasmBytes, "thisIsContractAddress", "testGetContractAddress", []string{}, types.Call)
+
+	if err != nil {
+		log.Panicln(err)
+	}
+
+	if output != "contract address: thisIsContractAddress" {
+		t.Errorf("Output incorrect: %s", output)
+	}
+}
