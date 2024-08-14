@@ -25,6 +25,7 @@ func NewIndexer(dbRepo *db.DBRepository, bitcoinRepo *bitcoin.BitcoinRepository)
 
 func (i *Indexer) flush(blockHeight int32, newBlocks *[]db.Block, newTxs *[]db.Transaction, newVins *[]db.Vin, newVouts *[]db.Vout) error {
 	log.Printf("Flushing blocks to DB. Last block: %d", blockHeight)
+	// TODO: it might be possible to run these async using waitgroup
 	err := i.DbRepo.CreateBlocks(newBlocks)
 	if err != nil {
 		return err
