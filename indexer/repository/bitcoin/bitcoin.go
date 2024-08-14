@@ -80,7 +80,7 @@ func (b *BitcoinRepository) GetBlockHash(height int32) (string, error) {
 
 func (b *BitcoinRepository) GetBlock(blockHash string) (*GetBlock, error) {
 	blockHashParam, _ := json.Marshal(blockHash)
-	verbosity, _ := json.Marshal(2)
+	verbosity, _ := json.Marshal(3)
 	paramsJson := []json.RawMessage{json.RawMessage(blockHashParam), json.RawMessage(verbosity)}
 
 	resBytes, err := b.rpc("getblock", paramsJson)

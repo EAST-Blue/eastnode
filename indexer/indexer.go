@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+const MAX_BLOCK_FLUSH = 500
+
 type Indexer struct {
 	DbRepo      *db.DBRepository
 	bitcoinRepo *bitcoin.BitcoinRepository
@@ -19,6 +21,40 @@ type Indexer struct {
 
 func NewIndexer(dbRepo *db.DBRepository, bitcoinRepo *bitcoin.BitcoinRepository) *Indexer {
 	return &Indexer{dbRepo, bitcoinRepo}
+}
+
+func (i *Indexer) flush(blockHeight int32, newBlocks *[]db.Block, newTxs *[]db.Transaction, newVins *[]db.Vin, newVouts *[]db.Vout) error {
+	log.Printf("Flushing blocks to DB. Last block: %d", blockHeight)
+	// TODO: it might be possible to run these async using waitgroup
+	err := i.DbRepo.CreateBlocks(newBlocks)
+	if err != nil {
+		return err
+	}
+
+	err = i.DbRepo.CreateTransactions(newTxs)
+	if err != nil {
+		return err
+	}
+
+	err = i.DbRepo.CreateVins(newVins)
+	if err != nil {
+		return err
+	}
+
+	err = i.DbRepo.CreateVouts(newVouts)
+	if err != nil {
+		return err
+	}
+
+	// update outpoint spending
+	err = i.DbRepo.SetLastHeight(blockHeight)
+	if err != nil {
+		return err
+	}
+	commitMessage := fmt.Sprintf("Indexed block %d", blockHeight)
+	i.DbRepo.Db.Exec("CALL DOLT_COMMIT('--allow-empty', '-Am', ?);", commitMessage)
+
+	return nil
 }
 
 func (i *Indexer) IndexBlocks(fromBlockHeight int32, toBlockHeight int32) error {
@@ -29,6 +65,11 @@ func (i *Indexer) IndexBlocks(fromBlockHeight int32, toBlockHeight int32) error 
 	if err != nil {
 		return err
 	}
+
+	newBlocks := []db.Block{}
+	newTxs := []db.Transaction{}
+	newVins := []db.Vin{}
+	newVouts := []db.Vout{}
 
 	for {
 		// break if current block-height is the latest, no need to index next block
@@ -41,9 +82,21 @@ func (i *Indexer) IndexBlocks(fromBlockHeight int32, toBlockHeight int32) error 
 			return err
 		}
 
-		err = i.HandleBlock(blockHeight, block)
+		err = i.HandleBlock(blockHeight, block, &newBlocks, &newTxs, &newVins, &newVouts)
 		if err != nil {
 			return err
+		}
+
+		if toBlockHeight-blockHeight <= 1 || len(newBlocks) >= MAX_BLOCK_FLUSH {
+			err = i.flush(blockHeight, &newBlocks, &newTxs, &newVins, &newVouts)
+			newBlocks = []db.Block{}
+			newTxs = []db.Transaction{}
+			newVins = []db.Vin{}
+			newVouts = []db.Vout{}
+
+			if err != nil {
+				return err
+			}
 		}
 
 		commitMessage := fmt.Sprintf("Indexed block %d", blockHeight)
@@ -54,17 +107,17 @@ func (i *Indexer) IndexBlocks(fromBlockHeight int32, toBlockHeight int32) error 
 			return err
 		}
 
+		// Sleep because of RPC rate limit
 		time.Sleep(time.Duration(i) * time.Millisecond)
 
 		blockHeight++
 		blockHash = block.Nextblockhash
-
 	}
 
 	return nil
 }
 
-func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error {
+func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock, newBlocks *[]db.Block, newTxs *[]db.Transaction, newVins *[]db.Vin, newVout *[]db.Vout) error {
 	log.Printf("handle block height %d, hash %s", blockHeight, block.Hash)
 
 	// insert block
@@ -78,15 +131,10 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error 
 		Bits:          block.Bits,
 		MerkleRoot:    block.Merkleroot,
 	}
-	err := i.DbRepo.CreateBlock(&newBlock)
-	if err != nil {
-		return err
-	}
+	*newBlocks = append(*newBlocks, newBlock)
 
 	// fill the txhash using txid instead of txhash, for the witness tx the id is different from the hash
 	// https://bitcoin.stackexchange.com/questions/77699/whats-the-difference-between-txid-and-hash-getrawtransaction-bitcoind
-	newTxs := make([]db.Transaction, 0, len(block.Tx))
-	newOutpoints := []db.OutPoint{}
 
 	for txIdx, transaction := range block.Tx {
 		// insert transaction
@@ -99,91 +147,48 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock) error 
 			BlockHeight: uint64(blockHeight),
 			BlockIndex:  uint32(txIdx),
 		}
-		newTxs = append(newTxs, newTx)
-
-		// insert outpoints
+		*newTxs = append(*newTxs, newTx)
 
 		// vouts
 		for voutIdx, vout := range transaction.Vout {
 			// convert btc value into sat, 1 btc is 100_000_000 sats
 			satValue := int64(vout.Value * 100_000_000)
-			outpoint := db.OutPoint{
-				FundingTxHash:       transaction.Txid,
-				FundingTxIndex:      uint32(voutIdx),
-				FundingBlockHash:    block.Hash,
-				FundingBlockHeight:  uint64(blockHeight),
-				FundingBlockTxIndex: uint32(txIdx),
-				PkScript:            vout.ScriptPubKey.Hex,
-				Value:               satValue,
-				Spender:             vout.ScriptPubKey.Address,
+			vout := db.Vout{
+				TxHash:       transaction.Txid,
+				TxIndex:      uint32(voutIdx),
+				BlockHash:    block.Hash,
+				BlockHeight:  uint64(blockHeight),
+				BlockTxIndex: uint32(txIdx),
+				PkScript:     vout.ScriptPubKey.Hex,
+				Value:        satValue,
+				Spender:      vout.ScriptPubKey.Address,
 			}
-			newOutpoints = append(newOutpoints, outpoint)
-			if err != nil {
-				return err
-			}
+			*newVout = append(*newVout, vout)
 		}
 
 		// vins
 		for idxx, vin := range transaction.Vin {
-			// coinbase
-			if vin.Coinbase != "" {
-				outpoint := db.OutPoint{
-					SpendingTxHash:       transaction.Txid,
-					SpendingTxIndex:      uint32(idxx),
-					SpendingBlockHash:    block.Hash,
-					SpendingBlockHeight:  uint64(blockHeight),
-					SpendingBlockTxIndex: uint32(txIdx),
-					Sequence:             uint32(vin.Sequence),
-					SignatureScript:      vin.ScriptSig.Hex,
-					Witness:              strings.Join(vin.Txinwitness, ","),
+			satValue := int64(vin.PrevOutput.Value * 100_000_000)
+			vin := db.Vin{
+				TxHash:          transaction.Txid,
+				TxIndex:         uint32(idxx),
+				BlockHash:       block.Hash,
+				BlockHeight:     uint64(blockHeight),
+				BlockTxIndex:    uint32(txIdx),
+				Sequence:        uint32(vin.Sequence),
+				SignatureScript: vin.ScriptSig.Hex,
 
-					FundingTxHash:  vin.Txid,
-					FundingTxIndex: uint32(vin.Vout),
-				}
-				newOutpoints = append(newOutpoints, outpoint)
-				if err != nil {
-					return err
-				}
+				PkScript: vin.PrevOutput.ScriptPubKey.Hex,
+				Value:    satValue,
+				Spender:  vin.PrevOutput.ScriptPubKey.Address,
+
+				Witness: strings.Join(vin.Txinwitness, ","),
 			}
-		}
-	}
-	err = i.DbRepo.CreateTransactions(&newTxs)
-	if err != nil {
-		return err
-	}
-
-	err = i.DbRepo.CreateOutpoints(&newOutpoints)
-	if err != nil {
-		return err
-	}
-
-	// update outpoint spending
-	for txIdx, transaction := range block.Tx {
-
-		// vins
-		for idxx, vin := range transaction.Vin {
-			if vin.Coinbase == "" {
-				err = i.DbRepo.UpdateOutpointSpending(&db.UpdateOutpointSpendingData{
-					PreviousTxHash:  vin.Txid,
-					PreviousTxIndex: uint32(vin.Vout),
-
-					SpendingTxHash:       transaction.Txid,
-					SpendingTxIndex:      uint32(idxx),
-					SpendingBlockHash:    block.Hash,
-					SpendingBlockHeight:  uint64(blockHeight),
-					SpendingBlockTxIndex: uint32(txIdx),
-					Sequence:             uint32(vin.Sequence),
-					SignatureScript:      vin.ScriptSig.Hex,
-					Witness:              strings.Join(vin.Txinwitness, ","),
-				})
-				if err != nil {
-					return err
-				}
-			}
+			*newVins = append(*newVins, vin)
 		}
 	}
 
-	return i.DbRepo.SetLastHeight(blockHeight)
+	return nil
 }
 
 // TODO

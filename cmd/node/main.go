@@ -6,7 +6,6 @@ import (
 	indexerDb "eastnode/indexer/repository/db"
 	storeDB "eastnode/utils/store"
 	"os"
-	"time"
 
 	"eastnode/chain"
 	"eastnode/jsonrpc"
@@ -26,7 +25,6 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	t1 := time.Now()
 	log.Println("Initializing...")
 
 	bitcoinRepo := bitcoin.NewBitcoinRepo(os.Getenv("BTC_RPC_URL"), "east", "east")
@@ -62,8 +60,6 @@ func main() {
 	router.Handle("/", rpcServer)
 
 	log.Println("rpc is running")
-	tDiff := time.Since(t1)
-	log.Printf("node up and running in %s", tDiff)
 
 	err = http.ListenAndServe(":4000", router)
 	if err != nil {
