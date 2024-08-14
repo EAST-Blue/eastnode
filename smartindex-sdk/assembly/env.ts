@@ -33,3 +33,6 @@ export declare function getTransactionsByBlockHash(block_hash: string): i32;
 
 @external("env", "getOutpointsByTransactionHash")
 export declare function getOutpointsByTransactionHash(tx_hash: string): i32;
+
+@external("env", "contractAddress")
+export declare function contractAddress(): i32;
