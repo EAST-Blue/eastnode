@@ -6,6 +6,7 @@ import (
 
 	"github.com/libsv/go-bt/v2/bscript"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type DBRepository struct {
@@ -157,12 +158,30 @@ func (d *DBRepository) CreateTransaction(transaction *Transaction) error {
 	return err
 }
 
+func (d *DBRepository) CreateTransactions(transactions *[]Transaction) error {
+	err := d.Db.Clauses(clause.OnConflict{DoNothing: true}).CreateInBatches(transactions, 1024).Error
+	if err == gorm.ErrDuplicatedKey {
+		return nil
+	}
+
+	return err
+}
+
 func (d *DBRepository) CreateTransactionWithTx(tx *gorm.DB, transaction *Transaction) error {
 	return tx.Create(transaction).Error
 }
 
 func (d *DBRepository) CreateOutpoint(outpoint *OutPoint) error {
 	err := d.Db.Create(outpoint).Error
+	if err == gorm.ErrDuplicatedKey {
+		return nil
+	}
+
+	return err
+}
+
+func (d *DBRepository) CreateOutpoints(outpoints *[]OutPoint) error {
+	err := d.Db.CreateInBatches(outpoints, 1024).Error
 	if err == gorm.ErrDuplicatedKey {
 		return nil
 	}
