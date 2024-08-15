@@ -329,3 +329,42 @@ func (d *DBRepository) GetOutpointsByTransactionHash(transactionHash string) ([]
 
 	return outpoints, nil
 }
+
+func (d *DBRepository) DeleteBlocksFrom(height int32) error {
+	// Start a transaction
+	tx := d.Db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// Delete vouts
+	if err := tx.Where("block_height >= ?", height).Delete(&Vout{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete vins
+	if err := tx.Where("block_height >= ?", height).Delete(&Vin{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete transactions
+	if err := tx.Where("block_height >= ?", height).Delete(&Transaction{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete blocks
+	if err := tx.Where("height >= ?", height).Delete(&Block{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Commit the transaction
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	return nil
+}

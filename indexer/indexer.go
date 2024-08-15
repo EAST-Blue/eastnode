@@ -3,7 +3,6 @@ package indexer
 import (
 	"eastnode/indexer/repository/bitcoin"
 	"eastnode/indexer/repository/db"
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -12,14 +11,12 @@ import (
 	"time"
 )
 
-const MAX_BLOCK_FLUSH = 500
-
 type Indexer struct {
 	DbRepo      *db.DBRepository
-	bitcoinRepo *bitcoin.BitcoinRepository
+	bitcoinRepo bitcoin.BitcoinRepositoryInterface
 }
 
-func NewIndexer(dbRepo *db.DBRepository, bitcoinRepo *bitcoin.BitcoinRepository) *Indexer {
+func NewIndexer(dbRepo *db.DBRepository, bitcoinRepo bitcoin.BitcoinRepositoryInterface) *Indexer {
 	return &Indexer{dbRepo, bitcoinRepo}
 }
 
@@ -71,8 +68,8 @@ func (i *Indexer) IndexBlocks(fromBlockHeight int32, toBlockHeight int32) error 
 	newVouts := []db.Vout{}
 
 	for {
-		// break if current block-height is the latest, no need to index next block
-		if !(blockHash != "" && (blockHeight <= toBlockHeight)) {
+		// Break if toBlockHeight is empty (0) or if we've reached it
+		if blockHeight > toBlockHeight {
 			break
 		}
 
@@ -86,24 +83,25 @@ func (i *Indexer) IndexBlocks(fromBlockHeight int32, toBlockHeight int32) error 
 			return err
 		}
 
-		if toBlockHeight-blockHeight <= 1 || len(newBlocks) >= MAX_BLOCK_FLUSH {
+		// Flush data if we've reached toBlockHeight
+		if blockHeight == toBlockHeight {
 			err = i.flush(blockHeight, &newBlocks, &newTxs, &newVins, &newVouts)
+			if err != nil {
+				return err
+			}
 			newBlocks = []db.Block{}
 			newTxs = []db.Transaction{}
 			newVins = []db.Vin{}
 			newVouts = []db.Vout{}
+		}
 
+		i := 10
+
+		if os.Getenv("INDEXER_SLEEP_TIME") != "" {
+			i, err = strconv.Atoi(os.Getenv("INDEXER_SLEEP_TIME"))
 			if err != nil {
 				return err
 			}
-		}
-
-		commitMessage := fmt.Sprintf("Indexed block %d", blockHeight)
-		i.DbRepo.Db.Exec("CALL DOLT_COMMIT('--allow-empty', '-Am', ?);", commitMessage)
-
-		i, err := strconv.Atoi(os.Getenv("INDEXER_SLEEP_TIME"))
-		if err != nil {
-			return err
 		}
 
 		// Sleep because of RPC rate limit
@@ -111,6 +109,9 @@ func (i *Indexer) IndexBlocks(fromBlockHeight int32, toBlockHeight int32) error 
 
 		blockHeight++
 		blockHash = block.Nextblockhash
+		if blockHash == "" {
+			break // End of chain reached
+		}
 	}
 
 	return nil
@@ -190,13 +191,60 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock, newBlo
 	return nil
 }
 
-// TODO
-func (i *Indexer) FindReorgHeight() {
-	panic(errors.New("not implemented yet"))
+func (i *Indexer) FindReorgHeight(fromHeight int32, depth int32) (int32, error) {
+	for d := depth; d > 0; d-- {
+		height := fromHeight - int32(d)
+
+		if height <= 0 {
+			break // Stop if we reach genesis block
+		}
+
+		// Get block hash from our database
+		dbBlock, err := i.DbRepo.GetBlockByHeight(int64(height))
+		if err != nil {
+			return 0, err
+		}
+
+		// Get block hash from Bitcoin node
+		btcBlockHash, err := i.bitcoinRepo.GetBlockHash(height)
+		if err != nil {
+			return 0, err
+		}
+
+		// Compare hashes
+		if dbBlock.Hash != btcBlockHash {
+			// Reorg detected, return the height where it occurred
+			return height, nil
+		}
+	}
+
+	// No reorg detected in the last 6 blocks
+	return 0, nil
 }
 
-// TODO
-func (i *Indexer) Reorg() {
-	panic(errors.New("not implemented yet"))
+func (i *Indexer) Reorg(fromHeight int32, depth int32) (int32, error) {
+	// Find the height where the reorg occurred
+	reorgHeight, err := i.FindReorgHeight(fromHeight, depth)
+	if err != nil {
+		return 0, fmt.Errorf("failed to find reorg height: %w", err)
+	}
 
+	if reorgHeight == 0 {
+		// No reorg detected
+		return 0, nil
+	}
+
+	log.Printf("Reorg detected at height %d. Starting reorganization process.", reorgHeight)
+
+	// Delete blocks from reorg height onwards
+	err = i.DbRepo.DeleteBlocksFrom(reorgHeight)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete blocks from height %d: %w", reorgHeight, err)
+	}
+	err = i.DbRepo.SetLastHeight(reorgHeight - 1)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete blocks from height %d: %w", reorgHeight, err)
+	}
+
+	return reorgHeight, nil
 }
