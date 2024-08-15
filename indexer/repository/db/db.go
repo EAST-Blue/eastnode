@@ -262,6 +262,8 @@ func (d *DBRepository) GetOutpointsByTransactionHash(transactionHash string) ([]
 			SpendingBlockHash:    outpoint.BlockHash,
 			SpendingBlockHeight:  outpoint.BlockHeight,
 			SpendingBlockTxIndex: outpoint.BlockTxIndex,
+			FundingTxHash:        outpoint.FundingTxHash,
+			FundingTxIndex:       outpoint.FundingTxIndex,
 			Sequence:             outpoint.Sequence,
 			SignatureScript:      outpoint.SignatureScript,
 			Witness:              outpoint.Witness,

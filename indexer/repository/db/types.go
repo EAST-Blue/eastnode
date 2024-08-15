@@ -79,6 +79,9 @@ type Vin struct {
 	SignatureScript string `json:"signature_script"`
 	Witness         string `json:"witness"`
 
+	FundingTxHash  string `json:"funding_tx_hash"`
+	FundingTxIndex uint32 `json:"funding_tx_index"`
+
 	PkScript string `json:"pk_script"`
 	Value    int64  `json:"value"`
 	Spender  string `json:"spender"`
