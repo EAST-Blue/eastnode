@@ -23,7 +23,9 @@ func (s *Store) InitIndexerDb() {
 		DriverName: "dolt",
 		DSN:        "file://" + utils.Cwd() + "/db?commitname=root&commitemail=root@east&multistatements=true&database=indexer",
 	}), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Error),
+		Logger:                 logger.Default.LogMode(logger.Error),
+		PrepareStmt:            true,
+		SkipDefaultTransaction: true,
 	})
 	if err != nil {
 		panic(err)
