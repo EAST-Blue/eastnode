@@ -226,7 +226,15 @@ func (d *DBRepository) CreateVoutWithTx(tx *gorm.DB, outpoint *Vout) error {
 
 func (d *DBRepository) GetBlockByHeight(height int64) (*Block, error) {
 	block := &Block{}
-	if resp := d.Db.First(block, "height = ?", height); resp.Error != nil {
+	if resp := d.Db.First(block, "height = ? AND is_orphan = ?", height, false); resp.Error != nil {
+		return block, resp.Error
+	}
+	return block, nil
+}
+
+func (d *DBRepository) GetBlockByHeightWithIsOrphan(height int64, isOrphan bool) (*Block, error) {
+	block := &Block{}
+	if resp := d.Db.First(block, "height = ? AND is_orphan = ?", height, isOrphan); resp.Error != nil {
 		return block, resp.Error
 	}
 	return block, nil
@@ -330,39 +338,9 @@ func (d *DBRepository) GetOutpointsByTransactionHash(transactionHash string) ([]
 	return outpoints, nil
 }
 
-func (d *DBRepository) DeleteBlocksFrom(height int32) error {
-	// Start a transaction
-	tx := d.Db.Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
-
-	// Delete vouts
-	if err := tx.Where("block_height >= ?", height).Delete(&Vout{}).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	// Delete vins
-	if err := tx.Where("block_height >= ?", height).Delete(&Vin{}).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	// Delete transactions
-	if err := tx.Where("block_height >= ?", height).Delete(&Transaction{}).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	// Delete blocks
-	if err := tx.Where("height >= ?", height).Delete(&Block{}).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	// Commit the transaction
-	if err := tx.Commit().Error; err != nil {
+func (d *DBRepository) UpdateBlocksAsOrphan(height int32) error {
+	// Update blocks
+	if err := d.Db.Model(&Block{}).Where("height >= ?", height).Update("is_orphan", true).Error; err != nil {
 		return err
 	}
 

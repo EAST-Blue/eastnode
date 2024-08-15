@@ -20,6 +20,48 @@ func NewIndexer(dbRepo *db.DBRepository, bitcoinRepo bitcoin.BitcoinRepositoryIn
 	return &Indexer{dbRepo, bitcoinRepo}
 }
 
+func (i *Indexer) SyncBlocks(startHeight int32, endHeight int32) error {
+	if endHeight-startHeight > MAX_BLOCK_FLUSH {
+		// Many blocks to sync, log the sync process
+		log.Printf("Syncing %d blocks from height %d to %d", endHeight-startHeight, startHeight, endHeight)
+
+		for h := startHeight; h <= endHeight; h += MAX_BLOCK_FLUSH {
+			endBlock := h + MAX_BLOCK_FLUSH
+			if endBlock > endHeight {
+				endBlock = endHeight
+			}
+
+			err := i.IndexBlocks(h, endBlock)
+			if err != nil {
+				return err
+			}
+			// Increment i after the block is indexed
+			h++
+		}
+	} else {
+		// Just a few blocks to add, sync one by one
+		for h := startHeight; h <= endHeight; h++ {
+			log.Printf("Indexing block %d", h)
+
+			// Check for reorg before indexing each block
+			reorgHeight, err := i.Reorg(h, REORG_DEPTH_CHECK)
+			if err != nil {
+				return err
+			}
+
+			if reorgHeight > 0 {
+				h = reorgHeight
+			}
+
+			err = i.IndexBlocks(h, h)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (i *Indexer) flush(blockHeight int32, newBlocks *[]db.Block, newTxs *[]db.Transaction, newVins *[]db.Vin, newVouts *[]db.Vout) error {
 	log.Printf("Flushing blocks to DB. Last block: %d", blockHeight)
 	err := i.DbRepo.CreateBlocks(newBlocks)
@@ -237,7 +279,7 @@ func (i *Indexer) Reorg(fromHeight int32, depth int32) (int32, error) {
 	log.Printf("Reorg detected at height %d. Starting reorganization process.", reorgHeight)
 
 	// Delete blocks from reorg height onwards
-	err = i.DbRepo.DeleteBlocksFrom(reorgHeight)
+	err = i.DbRepo.UpdateBlocksAsOrphan(reorgHeight)
 	if err != nil {
 		return 0, fmt.Errorf("failed to delete blocks from height %d: %w", reorgHeight, err)
 	}

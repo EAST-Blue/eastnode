@@ -23,8 +23,7 @@ func TestScheduler_Start(t *testing.T) {
 	dbRepo := db.NewDBRepository(instance.Gorm)
 	mockBitcoinRepo := bitcoin.NewMockBitcoinRepo()
 
-	indexerRepo := NewIndexer(dbRepo, mockBitcoinRepo)
-	scheduler := NewScheduler(indexerRepo)
+	indexer := NewIndexer(dbRepo, mockBitcoinRepo)
 
 	startHeight := 0
 	endHeight := 250
@@ -32,15 +31,15 @@ func TestScheduler_Start(t *testing.T) {
 		mockBitcoinRepo.AddOrReplaceBlock(int32(i))
 	}
 
-	scheduler.SyncBlocks(int32(startHeight), int32(endHeight))
+	indexer.SyncBlocks(int32(startHeight), int32(endHeight))
 
 	// Check the last block hash from indexed blocks and bitcoin repo
-	lastIndexedBlock, err := dbRepo.GetBlockByHeight(int64(endHeight))
+	lastIndexedBlock, err := indexer.DbRepo.GetBlockByHeight(int64(endHeight))
 	if err != nil {
 		t.Fatalf("Failed to get last indexed block: %v", err)
 	}
 
-	lastBitcoinBlockHash, err := mockBitcoinRepo.GetBlockHash(int32(endHeight))
+	lastBitcoinBlockHash, err := indexer.bitcoinRepo.GetBlockHash(int32(endHeight))
 	if err != nil {
 		t.Fatalf("Failed to get last bitcoin block hash: %v", err)
 	}
@@ -49,7 +48,7 @@ func TestScheduler_Start(t *testing.T) {
 		t.Errorf("Last block hash mismatch. Indexed: %s, Bitcoin: %s", lastIndexedBlock.Hash, lastBitcoinBlockHash)
 	}
 
-	indexedBlockCount, err := mockBitcoinRepo.GetBlockCount()
+	indexedBlockCount, err := indexer.bitcoinRepo.GetBlockCount()
 	if err != nil {
 		t.Fatalf("Failed to get block count: %v", err)
 	}
@@ -69,8 +68,7 @@ func TestScheduler_ReorgSimulation(t *testing.T) {
 	dbRepo := db.NewDBRepository(instance.Gorm)
 	mockBitcoinRepo := bitcoin.NewMockBitcoinRepo()
 
-	indexerRepo := NewIndexer(dbRepo, mockBitcoinRepo)
-	scheduler := NewScheduler(indexerRepo)
+	indexer := NewIndexer(dbRepo, mockBitcoinRepo)
 
 	// Initial blockchain setup
 	startHeight := 0
@@ -80,7 +78,7 @@ func TestScheduler_ReorgSimulation(t *testing.T) {
 	}
 
 	// Index initial blocks
-	err := scheduler.SyncBlocks(int32(startHeight), int32(endHeight))
+	err := indexer.SyncBlocks(int32(startHeight), int32(endHeight))
 	if err != nil {
 		t.Fatalf("Failed to sync initial blocks: %v", err)
 	}
@@ -95,21 +93,21 @@ func TestScheduler_ReorgSimulation(t *testing.T) {
 		wrongBlockHash = append(wrongBlockHash, blockHash)
 	}
 
-	log.Println("===== Simulate reorg: replace blocks 8 and 9, add new block 10 =====")
+	log.Println("===== Simulate reorg at block height 8 when syncing latest block 10 (n-2) =====")
 	// Simulate reorg: replace blocks 8 and 9, add new block 10
 	mockBitcoinRepo.AddOrReplaceBlock(8)
 	mockBitcoinRepo.AddOrReplaceBlock(9)
 	mockBitcoinRepo.AddOrReplaceBlock(10)
 
 	// Run scheduler to handle reorg
-	err = scheduler.SyncBlocks(int32(endHeight+1), 10)
+	err = indexer.SyncBlocks(int32(endHeight+1), 10)
 	if err != nil {
 		t.Fatalf("Failed to sync blocks after reorg: %v", err)
 	}
 
 	// Verify reorg occurred
 	for i := 8; i <= 10; i++ {
-		blockHash, err := mockBitcoinRepo.GetBlockHash(int32(i))
+		blockHash, err := indexer.bitcoinRepo.GetBlockHash(int32(i))
 		if err != nil {
 			t.Fatalf("Failed to get block hash for height %d: %v", i, err)
 		}
@@ -119,18 +117,35 @@ func TestScheduler_ReorgSimulation(t *testing.T) {
 			t.Errorf("Block hash at height %d should have changed after reorg, but it's still %s", i, blockHash)
 		}
 
-		indexedBlockHash, err := indexerRepo.bitcoinRepo.GetBlockHash(int32(i))
+		if i <= 9 {
+			// Check if the block is marked as orphan
+			orphanBlock, err := indexer.DbRepo.GetBlockByHeightWithIsOrphan(int64(i), true)
+			if err != nil {
+				t.Fatalf("Failed to get orphan block for height %d: %v", i, err)
+			}
+			if orphanBlock == nil {
+				t.Errorf("Expected block at height %d to be marked as orphan, but it wasn't", i)
+			} else {
+				// Verify that the orphan block hash matches the wrong block hash
+				if orphanBlock.Hash != wrongBlockHash[i-8] {
+					t.Errorf("Orphan block hash mismatch at height %d. Expected: %s, Got: %s", i, wrongBlockHash[i-8], orphanBlock.Hash)
+				}
+			}
+		}
+
+		// Verify that the new block is correctly indexed and not marked as orphan
+		indexedBlock, err := indexer.DbRepo.GetBlockByHeight(int64(i))
 		if err != nil {
 			t.Fatalf("Failed to get indexed block hash for height %d: %v", i, err)
 		}
 
-		if blockHash != indexedBlockHash {
-			t.Errorf("Block hash mismatch at height %d. Expected: %s, Got: %s", i, blockHash, indexedBlockHash)
+		if blockHash != indexedBlock.Hash {
+			t.Errorf("Block hash mismatch at height %d. Expected: %s, Got: %s", i, blockHash, indexedBlock.Hash)
 		}
 	}
 
 	// Verify final block count
-	indexedBlockCount, err := dbRepo.GetLastHeight()
+	indexedBlockCount, err := indexer.DbRepo.GetLastHeight()
 	if err != nil {
 		t.Fatalf("Failed to get last indexed height: %v", err)
 	}
