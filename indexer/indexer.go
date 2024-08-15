@@ -174,6 +174,9 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock, newBlo
 				Sequence:        uint32(vin.Sequence),
 				SignatureScript: vin.ScriptSig.Hex,
 
+				FundingTxHash:  vin.Txid,
+				FundingTxIndex: uint32(vin.Vout),
+
 				PkScript: vin.PrevOutput.ScriptPubKey.Hex,
 				Value:    satValue,
 				Spender:  vin.PrevOutput.ScriptPubKey.Address,
