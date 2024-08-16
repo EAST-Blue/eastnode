@@ -38,8 +38,8 @@ func initChainTest() *Chain {
 	}
 
 	bc := new(Chain)
-	bc.Store = utils.GetFakeInstance(utils.ChainDB)
-	bc.WasmRuntime = &runtime.WasmRuntime{Store: *utils.GetFakeInstance(utils.SmartIndexDB)}
+	bc.Store = utils.GetFakeInstance(utils.ChainDB, "../utils/store/test/doltdump.sql")
+	bc.WasmRuntime = &runtime.WasmRuntime{Store: *utils.GetFakeInstance(utils.SmartIndexDB, "../utils/store/test/doltdump.sql")}
 	bc.Mempool = new(Mempool)
 
 	if err := bc.Mempool.Init(bc.Store.KV); err != nil {
