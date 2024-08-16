@@ -8,7 +8,6 @@ type Scheduler struct {
 	indexer *Indexer
 }
 
-const MAX_BLOCK_FLUSH = 100
 const REORG_DEPTH_CHECK = 6
 
 func NewScheduler(indexer *Indexer) *Scheduler {

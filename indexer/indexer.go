@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const MAX_BLOCK_FLUSH = 500
+
 type Indexer struct {
 	DbRepo      *db.DBRepository
 	bitcoinRepo bitcoin.BitcoinRepositoryInterface
@@ -219,6 +221,9 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock, newBlo
 				BlockTxIndex:    uint32(txIdx),
 				Sequence:        uint32(vin.Sequence),
 				SignatureScript: vin.ScriptSig.Hex,
+
+				FundingTxHash:  vin.Txid,
+				FundingTxIndex: uint32(vin.Vout),
 
 				PkScript: vin.PrevOutput.ScriptPubKey.Hex,
 				Value:    satValue,
