@@ -94,6 +94,22 @@ func (b *BitcoinRepository) GetBlock(blockHash string) (*GetBlock, error) {
 	return &getBlock.Result, nil
 }
 
+func (b *BitcoinRepository) GetBlockWithVerbosity(blockHash string, verbosity int32) (*GetBlock, error) {
+	blockHashParam, _ := json.Marshal(blockHash)
+	verbosityParam, _ := json.Marshal(verbosity)
+	paramsJson := []json.RawMessage{json.RawMessage(blockHashParam), json.RawMessage(verbosityParam)}
+
+	resBytes, err := b.rpc("getblock", paramsJson)
+	if err != nil {
+		return nil, err
+	}
+
+	getBlock := GetBlockRPC{}
+	_ = json.Unmarshal(resBytes, &getBlock)
+
+	return &getBlock.Result, nil
+}
+
 func (b *BitcoinRepository) GetBlockCount() (int32, error) {
 	paramsJson := []json.RawMessage{}
 

@@ -250,7 +250,7 @@ func (i *Indexer) FindReorgHeight(fromHeight int32, depth int32) (int32, error) 
 			return 0, fmt.Errorf("failed to get block from Bitcoin node at height %d: %w", currentHeight, err)
 		}
 
-		btcBlock, err := i.bitcoinRepo.GetBlock(btcBlockHash)
+		btcBlock, err := i.bitcoinRepo.GetBlockWithVerbosity(btcBlockHash, 2)
 		if err != nil {
 			return 0, fmt.Errorf("failed to get block from Bitcoin node at height %d: %w", currentHeight, err)
 		}

@@ -36,6 +36,13 @@ func (m *MockBitcoinRepo) GetBlock(blockHash string) (*GetBlock, error) {
 	return nil, errors.New("block not found")
 }
 
+func (m *MockBitcoinRepo) GetBlockWithVerbosity(blockHash string, verbosity int32) (*GetBlock, error) {
+	if block, ok := m.blockDetails[blockHash]; ok {
+		return block, nil
+	}
+	return nil, errors.New("block not found")
+}
+
 func (m *MockBitcoinRepo) GetBlockCount() (int32, error) {
 	return m.blockCount, nil
 }
