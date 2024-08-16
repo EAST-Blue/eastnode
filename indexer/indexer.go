@@ -234,14 +234,11 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock, newBlo
 }
 
 func (i *Indexer) FindReorgHeight(fromHeight int32, depth int32) (int32, error) {
-	currentHeight := fromHeight
-
-	// If fromHeight is 0, skip the reorg check
 	if fromHeight == 0 {
 		return 0, nil
 	}
 
-	for {
+	for currentHeight := fromHeight; currentHeight > 0 && currentHeight >= fromHeight-depth; currentHeight-- {
 		// Get block from Bitcoin node
 		btcBlockHash, err := i.bitcoinRepo.GetBlockHash(int32(currentHeight))
 		if err != nil {
@@ -259,27 +256,15 @@ func (i *Indexer) FindReorgHeight(fromHeight int32, depth int32) (int32, error) 
 			return 0, fmt.Errorf("failed to get block from DB at height %d: %w", currentHeight, err)
 		}
 
-		// Compare previous block hashes
-		if btcBlock.Previousblockhash != dbBlock.Hash {
-			// Mismatch found, continue checking the previous block
-			currentHeight--
-		} else {
-			// No reorg detected, return 0
+		if btcBlock.Previousblockhash == dbBlock.Hash {
 			if currentHeight == fromHeight {
-				return 0, nil
+				return 0, nil // No reorg detected
 			}
-			// Previous block hashes match, return the next height (where the reorg starts)
-			return currentHeight, nil
-		}
-
-		// Stop if we reach genesis block or if we've checked all blocks in the depth
-		if currentHeight <= 0 || currentHeight < fromHeight-depth {
-			break
+			return currentHeight, nil // Reorg starts at this height
 		}
 	}
 
-	// No reorg detected within the specified depth
-	return 0, nil
+	return 0, nil // No reorg detected within the specified depth
 }
 
 func (i *Indexer) Reorg(fromHeight int32, depth int32) (int32, error) {
