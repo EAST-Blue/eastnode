@@ -1,2 +1,13 @@
 show tables;
 select * from indexers ;
+show tables;
+select block_height, value, tx_index, spender, pk_script from vouts where tx_hash = "ff419a53bc5acf9d12b2a175c88bfef651793065cd56b007458e43b9eb0e1185" order by tx_index asc;
+select block_height, value, tx_index, spender, pk_script from vouts where tx_hash = "d9889c573ff5eb2befc28f0b45e374fe41a462b8273d5e1bdc419795e93a6152" order by tx_index asc;
+select * from transactions where block_height = 245;
+select * from block limit 1;
+select * from blocks limit 1;
+select * from blocks where height = 245;
+select * from transactions where block_hash = "31cf2842234df17409806f97116dac26da71da7ba1027fec6786de024444fd1f";
+select * from transactions where block_hash = "006890addd857108ad151c26e03936eb75899df7f656ca45ffb9c02c0a513e10";
+select block_height, value, tx_index, spender, pk_script from vouts where tx_hash = "d9889c573ff5eb2befc28f0b45e374fe41a462b8273d5e1bdc419795e93a6152" order by tx_index asc;
+select block_height, value, tx_index, spender, pk_script from vins where tx_hash = "d9889c573ff5eb2befc28f0b45e374fe41a462b8273d5e1bdc419795e93a6152" order by tx_index asc;

@@ -2,11 +2,13 @@
 
 ## ETCHING
 tx: 58962c96f1b981a5fafbd64b3d44a8ac0922dee330a8211e73395681cf3588b2
+118
 
 ## MINT
 
 ### MINT_1: DEFAULT POINTER
 tx: 7ba48104b4e7e36d010497f402648c576b29b66f42e5792c2a400add970c33ed
+120
 100 -> index 0
 ```json
 {
@@ -18,6 +20,7 @@ tx: 7ba48104b4e7e36d010497f402648c576b29b66f42e5792c2a400add970c33ed
 
 ### MINT_2: DEFAULT POINTER, OP_RETURN ON INDEX 0
 tx: acd77c4dbd8d43d508799f0a7e7cdad5cded13da68b7ccb1616a5e7ac20ab09a
+122
 100 -> index 1 (default index non op_return)
 ```json
 {
@@ -30,6 +33,7 @@ tx: acd77c4dbd8d43d508799f0a7e7cdad5cded13da68b7ccb1616a5e7ac20ab09a
 
 ### MINT_3: POINTER INDEX 3
 tx: 73ec8431e09fa6f6375f4acb4ac7323b094e92396f847973f2c82fbcfc8aec78
+124
 100 -> index 3
 ```json
 {
@@ -43,6 +47,7 @@ tx: 73ec8431e09fa6f6375f4acb4ac7323b094e92396f847973f2c82fbcfc8aec78
 ```
 ### MINT_4: NO ELIGIBLE OUTPUT, ONLY OP_RETURN
 tx: 9b57374c1e9eae1fd58b9c8b0b678cc8601c122c8616d335d164cb1eb72c7aa5
+126
 amount will be transfered into change address hehe
 100 -> index 1
 ```json
@@ -58,6 +63,7 @@ amount will be transfered into change address hehe
 ```
 ### MINT_5: INVALID POINTER, INDEX > VOUTS.LENGTH
 tx: 1e84565ebe16c21344530529d5fea15d84549ca0fcbd56bc80168405c8b2c847
+128
 
 ```json
 {
@@ -74,6 +80,7 @@ tx: 1e84565ebe16c21344530529d5fea15d84549ca0fcbd56bc80168405c8b2c847
 ### MINT_6: INVALID POINTER, INDEX  === VOUTS.LENGTH
 Unfortunately, the 9b57374c1e9eae1fd58b9c8b0b678cc8601c122c8616d335d164cb1eb72c7aa5:1 has been destroyed because the outpoint included in this transaction.
 tx: 58f46c471849e72610c369e5263a0ade230b3f0a2d664215b046c94893d597c5
+130
 
 ```json
 {
