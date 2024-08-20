@@ -41,11 +41,11 @@ type Transaction struct {
 	Safe bool `json:"safe"`
 
 	BlockID     uint   `json:"block_id"`
-	BlockHash   string `json:"block_hash"`
+	BlockHash   string `gorm:"index:idx_block_hash_index,hash:true,priority:1" json:"block_hash"`
 	BlockHeight uint64 `json:"block_height"`
 
 	// TODO: need to add index for block_index
-	BlockIndex uint32 `json:"block_index"`
+	BlockIndex uint32 `gorm:"index:idx_block_hash_index,hash:true,priority:2" json:"block_index"`
 }
 
 type OutPoint struct {
