@@ -102,6 +102,7 @@ func (i *Indexer) IndexBlocks(fromBlockHeight int32, toBlockHeight int32) error 
 		commitMessage := fmt.Sprintf("Indexed block %d", blockHeight)
 		i.DbRepo.Db.Exec("CALL DOLT_COMMIT('--allow-empty', '-Am', ?);", commitMessage)
 
+		// Sleep because of RPC rate limit
 		i, err := strconv.Atoi(os.Getenv("INDEXER_SLEEP_TIME"))
 		if err != nil {
 			return err
@@ -125,7 +126,7 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock, newBlo
 		Hash:          block.Hash,
 		Height:        uint64(blockHeight),
 		PreviousBlock: block.Previousblockhash,
-		Version:       uint32(block.Version),
+		Version:       int32(block.Version),
 		Nonce:         uint32(block.Nonce),
 		Timestamp:     uint32(block.Time),
 		Bits:          block.Bits,
@@ -141,7 +142,7 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock, newBlo
 		newTx := db.Transaction{
 			Hash:        transaction.Txid,
 			LockTime:    uint32(transaction.Locktime),
-			Version:     uint32(transaction.Version),
+			Version:     int32(transaction.Version),
 			Safe:        false,
 			BlockHash:   block.Hash,
 			BlockHeight: uint64(blockHeight),
@@ -152,7 +153,7 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock, newBlo
 		// vouts
 		for voutIdx, vout := range transaction.Vout {
 			// convert btc value into sat, 1 btc is 100_000_000 sats
-			satValue := uint64(vout.Value * 100_000_000)
+			satValue := int64(vout.Value * 100_000_000)
 			vout := db.Vout{
 				TxHash:       transaction.Txid,
 				TxIndex:      uint32(voutIdx),
@@ -168,7 +169,7 @@ func (i *Indexer) HandleBlock(blockHeight int32, block *bitcoin.GetBlock, newBlo
 
 		// vins
 		for idxx, vin := range transaction.Vin {
-			satValue := uint64(vin.PrevOutput.Value * 100_000_000)
+			satValue := int64(vin.PrevOutput.Value * 100_000_000)
 			vin := db.Vin{
 				TxHash:          transaction.Txid,
 				TxIndex:         uint32(idxx),
