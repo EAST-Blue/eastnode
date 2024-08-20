@@ -10,6 +10,7 @@ require (
 	github.com/dustinxie/ecc v0.0.0-20210511000915-959544187564
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/rpc v1.2.1
+	github.com/joho/godotenv v1.5.1
 	github.com/libsv/go-bt/v2 v2.2.5
 	github.com/near/borsh-go v0.3.1
 	go.etcd.io/bbolt v1.3.10
@@ -19,7 +20,6 @@ require (
 
 require (
 	github.com/jinzhu/now v1.1.5 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/libsv/go-bk v0.1.6 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 )

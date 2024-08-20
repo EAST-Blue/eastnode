@@ -4,9 +4,11 @@ import (
 	"crypto"
 	"encoding/binary"
 	"encoding/hex"
-	"github.com/near/borsh-go"
+	"encoding/json"
 	"log"
 	"os"
+
+	"github.com/near/borsh-go"
 )
 
 func Itob(v uint64) []byte {
@@ -74,3 +76,13 @@ func BorshSerializeAndEncodeHex(target interface{}) string {
 
 	return str
 }
+
+
+func MapToStruct(m map[string]interface{}, v interface{}) error {
+    data, err := json.Marshal(m)
+    if err != nil {
+        return err
+    }
+    return json.Unmarshal(data, v)
+}
+

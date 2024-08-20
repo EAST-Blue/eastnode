@@ -230,6 +230,19 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("getOutpointsByTransactionHash").
 		NewFunctionBuilder().
+		WithFunc(func(height uint64) uint32 {
+			result, err := r.IndexerDbRepo.GetTransactionV1sByBlockHeight(height)
+			if err != nil {
+				panic(err)
+			}
+			serializedResult, _ := json.Marshal(result)
+
+			ptr := r.writeString(r.Mod.Memory(), string(serializedResult))
+
+			return uint32(ptr)
+		}).
+		Export("getTransactionV1sByBlockHeight").
+		NewFunctionBuilder().
 		WithFunc(func(strPtr int32) {
 			str := ToString(r.Mod.Memory(), int64(strPtr))
 
@@ -256,7 +269,19 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 
 			fmt.Println("consoleLog", str)
 		}).
-		Export("consoleLog")
+		Export("consoleLog").
+		NewFunctionBuilder().
+		WithFunc(func() uint32 {
+			network := os.Getenv("NETWORK")
+			if network == "" {
+				network = "regtest"
+			}
+
+			ptr := r.writeString(r.Mod.Memory(), network)
+
+			return uint32(ptr)
+		}).
+		Export("getNetwork")
 
 	assemblyscript.NewFunctionExporter().
 		ExportFunctions(envBuilder)

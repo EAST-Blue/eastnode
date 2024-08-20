@@ -331,3 +331,85 @@ func (d *DBRepository) GetOutpointsByTransactionHash(transactionHash string) ([]
 
 	return outpoints, nil
 }
+
+func (d *DBRepository) GetBlockHeightByHash(height uint64) (*string, error) {
+	block := Block{}
+	res := d.Db.Where("height = ?", height).First(&block)
+	if res.Error != nil {
+		if res.Error == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+
+		return nil, res.Error
+	}
+
+	return &block.Hash, nil
+}
+
+func (d *DBRepository) GetTransactionV1sByBlockHeight(height uint64) ([]*TransactionV1, error) {
+	hash, err := d.GetBlockHeightByHash(height)
+	if err != nil {
+		return nil, err
+	}
+
+	if hash == nil {
+		return []*TransactionV1{}, nil
+	}
+
+	return d.GetTransactionV1s(*hash)
+}
+
+func (d *DBRepository) GetTransactionV1s(hash string) ([]*TransactionV1, error) {
+	transactionV1s := []*TransactionV1{}
+	transactions := []*Transaction{}
+
+	if resp := d.Db.Order("block_index asc").Where("block_hash = ? ", hash).Find(&transactions); resp.Error != nil {
+		return nil, resp.Error
+	}
+	if len(transactions) == 0 {
+		return transactionV1s, nil
+	}
+
+	for _, tx := range transactions {
+		vins := []*Vin{}
+		vouts := []*Vout{}
+
+		// TODO: use promise to get vins and vouts
+		if resp := d.Db.Order("tx_index asc").Where("tx_hash = ? ", tx.Hash).Find(&vins); resp.Error != nil {
+			return nil, resp.Error
+		}
+		if resp := d.Db.Order("tx_index asc").Where("tx_hash = ? ", tx.Hash).Find(&vouts); resp.Error != nil {
+			return nil, resp.Error
+		}
+
+		vinV1s := []VinV1{}
+		for _, vin := range vins {
+			vinV1s = append(vinV1s, VinV1{
+				TxHash: vin.FundingTxHash,
+				Index:  vin.FundingTxIndex,
+				Value:  vin.Value,
+			})
+		}
+
+		voutV1s := []VoutV1{}
+		for _, vout := range vouts {
+			voutV1s = append(voutV1s, VoutV1{
+				TxHash:   vout.TxHash,
+				Index:    vout.TxIndex,
+				Address:  vout.Spender,
+				Value:    vout.Value,
+				PkScript: vout.PkScript,
+			})
+		}
+
+		transactionV1s = append(transactionV1s, &TransactionV1{
+			Hash:     tx.Hash,
+			LockTime: tx.LockTime,
+			Version:  tx.Version,
+			Vins:     vinV1s,
+			Vouts:    voutV1s,
+		})
+	}
+
+	return transactionV1s, nil
+}
