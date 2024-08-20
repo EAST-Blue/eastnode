@@ -25,7 +25,7 @@ type Block struct {
 	IsOrphan bool   `json:"is_orphan"`
 
 	PreviousBlock string `json:"previous_block"`
-	Version       int32 `json:"version"`
+	Version       int32  `json:"version"`
 	Nonce         uint32 `json:"nonce"`
 	Timestamp     uint32 `json:"timestamp"`
 	Bits          string `json:"bits"`
@@ -35,7 +35,7 @@ type Block struct {
 type Transaction struct {
 	Hash     string `gorm:"index:idx_hash;unique" json:"hash"`
 	LockTime uint32 `json:"lock_time"`
-	Version  int32 `json:"version"`
+	Version  int32  `json:"version"`
 	// TODO: what's definition of safe?
 	// - safe utxo: safe to spend
 	Safe bool `json:"safe"`
@@ -65,7 +65,7 @@ type OutPoint struct {
 	FundingBlockTxIndex uint32 `json:"funding_block_tx_index"`
 
 	PkScript string `json:"pk_script"`
-	Value    int64 `json:"value"`
+	Value    int64  `json:"value"`
 	Spender  string `json:"spender"`
 	Type     string `json:"type"`
 
@@ -88,13 +88,13 @@ type Vin struct {
 	FundingTxIndex uint32 `json:"funding_tx_index"`
 
 	PkScript string `json:"pk_script"`
-	Value    int64 `json:"value"`
+	Value    int64  `json:"value"`
 	Spender  string `json:"spender"`
 	Type     string `json:"type"`
 
-	P2shAsmScripts    *P2shAsmScripts `json:"p2sh_asm_scripts"`
-	PkAsmScripts      *[]string       `json:"pk_asm_scripts"`
-	WitnessAsmScripts *[]string       `json:"witness_asm_scripts"`
+	P2shAsmScripts    *P2shAsmScripts `json:"p2sh_asm_scripts" gorm:"-"`
+	PkAsmScripts      *[]string       `json:"pk_asm_scripts" gorm:"-"`
+	WitnessAsmScripts *[]string       `json:"witness_asm_scripts" gorm:"-"`
 }
 
 type Vout struct {
@@ -105,7 +105,7 @@ type Vout struct {
 	BlockTxIndex uint32 `json:"block_tx_index"`
 
 	PkScript string `json:"pk_script"`
-	Value    int64 `json:"value"`
+	Value    int64  `json:"value"`
 	Spender  string `json:"spender"`
 	Type     string `json:"type"`
 
