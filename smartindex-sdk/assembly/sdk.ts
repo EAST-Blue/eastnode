@@ -10,9 +10,11 @@ import {
   selectItems,
   updateItem,
   envGetTransactionV1sByBlockHeight,
+  envGetNetwork,
 } from "./env";
 import { Value } from "assemblyscript-json/assembly/JSON";
 import { TransactionV1, VinV1, VoutV1 } from "./types";
+import { Network } from "./constants";
 
 export class Table {
   public name: string;
@@ -405,4 +407,16 @@ export function getTransactionV1sByBlockHeight(height: u64): TransactionV1[] {
   return transactions;
 }
 
-// // TODO: add network
+export function getNetwork(): Network {
+  const networkStr = ptrToString(envGetNetwork());
+
+  if (networkStr === "mainnet") {
+    return Network.Mainnet;
+  } else if (networkStr === "testnet") {
+    return Network.Testnet;
+  } else if (networkStr === "signet") {
+    return Network.Signet;
+  } else {
+    return Network.Regtest;
+  }
+}

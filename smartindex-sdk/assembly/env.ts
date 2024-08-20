@@ -37,6 +37,9 @@ export declare function getOutpointsByTransactionHash(tx_hash: string): i32;
 @external("env", "contractAddress")
 export declare function contractAddress(): i32;
 
-// TODD: better naming for this function
+// TODD: better naming for these function
+@external("env", "getNetwork")
+export declare function envGetNetwork(): i32;
+
 @external("env", "getTransactionV1sByBlockHeight")
 export declare function envGetTransactionV1sByBlockHeight(height: u64): i32;

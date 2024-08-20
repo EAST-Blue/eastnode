@@ -14,6 +14,8 @@ import (
 )
 
 func getRuneWasmRuntime(dumpfile string) *WasmRuntime {
+	os.Setenv("NETWORK", "regtest")
+
 	instance := store.GetFakeInstance(store.SmartIndexDB, dumpfile)
 	indexerDbRepo := indexerDb.NewDBRepository(instance.Gorm)
 	wr := &WasmRuntime{Store: *instance, IndexerDbRepo: indexerDbRepo}
