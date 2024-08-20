@@ -5,6 +5,7 @@ import (
 	"eastnode/types"
 	utils "eastnode/utils"
 	store "eastnode/utils/store"
+	"fmt"
 	"log"
 	"os"
 	"reflect"
@@ -225,4 +226,71 @@ func TestRuneIndexOutput2(t *testing.T) {
 	if !reflect.DeepEqual(outpoints, expectedOutpoints) {
 		t.Error("outputs are incorrect")
 	}
+}
+
+func TestRuneGetBalance(t *testing.T) {
+	defer t.Cleanup(clearRuntimeTestRune)
+	wasmBytes, _ := os.ReadFile("../../example-op-return-rune/smartindex/build/release.wasm")
+	wr := getRuneWasmRuntime("../utils/store/test/rune/doltdump_2.sql")
+	_, err := wr.RunWasmFunction("", wasmBytes, "temp", "init", []string{}, types.Call)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = wr.RunWasmFunction("", wasmBytes, "temp", "index", []string{"118", "245"}, types.Call)
+	if err != nil {
+		t.Error(err)
+	}
+
+	res, err := wr.RunWasmFunction("", wasmBytes, "temp", "get_balance", []string{"118", "1", "bcrt1qdm7l5990ksrja0zkn46z5hpuk4rf93ym5ms9ar"}, types.Call)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(res)
+
+	// TODO: assert the data
+}
+
+func TestRuneGetOutpointsByRuneId(t *testing.T) {
+	defer t.Cleanup(clearRuntimeTestRune)
+	wasmBytes, _ := os.ReadFile("../../example-op-return-rune/smartindex/build/release.wasm")
+	wr := getRuneWasmRuntime("../utils/store/test/rune/doltdump_2.sql")
+	_, err := wr.RunWasmFunction("", wasmBytes, "temp", "init", []string{}, types.Call)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = wr.RunWasmFunction("", wasmBytes, "temp", "index", []string{"118", "245"}, types.Call)
+	if err != nil {
+		t.Error(err)
+	}
+
+	res, err := wr.RunWasmFunction("", wasmBytes, "temp", "get_outpoints_by_rune_id", []string{"118", "1"}, types.Call)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(res)
+}
+
+func TestRuneGetOutpointsByRuneIdAndAddress(t *testing.T) {
+	defer t.Cleanup(clearRuntimeTestRune)
+	wasmBytes, _ := os.ReadFile("../../example-op-return-rune/smartindex/build/release.wasm")
+	wr := getRuneWasmRuntime("../utils/store/test/rune/doltdump_2.sql")
+	_, err := wr.RunWasmFunction("", wasmBytes, "temp", "init", []string{}, types.Call)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, err = wr.RunWasmFunction("", wasmBytes, "temp", "index", []string{"118", "245"}, types.Call)
+	if err != nil {
+		t.Error(err)
+	}
+
+	res, err := wr.RunWasmFunction("", wasmBytes, "temp", "get_outpoints_by_rune_id_and_address", []string{"118", "1", "bcrt1qdm7l5990ksrja0zkn46z5hpuk4rf93ym5ms9ar"}, types.Call)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(res)
+
+	// TODO: assert the data
 }
