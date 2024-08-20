@@ -387,7 +387,7 @@ func (d *DBRepository) GetTransactionV1s(hash string) ([]*TransactionV1, error) 
 			vinV1s = append(vinV1s, VinV1{
 				TxHash: vin.FundingTxHash,
 				Index:  vin.FundingTxIndex,
-				Value:  vin.Value,
+				Value:  uint64(vin.Value),
 			})
 		}
 
@@ -397,7 +397,7 @@ func (d *DBRepository) GetTransactionV1s(hash string) ([]*TransactionV1, error) 
 				TxHash:   vout.TxHash,
 				Index:    vout.TxIndex,
 				Address:  vout.Spender,
-				Value:    vout.Value,
+				Value:    uint64(vout.Value),
 				PkScript: vout.PkScript,
 			})
 		}
@@ -405,7 +405,7 @@ func (d *DBRepository) GetTransactionV1s(hash string) ([]*TransactionV1, error) 
 		transactionV1s = append(transactionV1s, &TransactionV1{
 			Hash:     tx.Hash,
 			LockTime: tx.LockTime,
-			Version:  tx.Version,
+			Version:  uint32(tx.Version),
 			Vins:     vinV1s,
 			Vouts:    voutV1s,
 		})
