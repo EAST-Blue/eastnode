@@ -11,10 +11,37 @@ import {
   updateItem,
   envGetTransactionV1sByBlockHeight,
   envGetNetwork,
+  consoleLog,
 } from "./env";
 import { Value } from "assemblyscript-json/assembly/JSON";
 import { TransactionV1, VinV1, VoutV1 } from "./types";
 import { Network } from "./constants";
+
+export class TableOption {
+  primaryKey: string;
+  // Default indexes are using btree, TODO: add more options
+  indexes: string[];
+  constructor(primaryKey: string, indexes: string[]) {
+    this.primaryKey = primaryKey;
+    this.indexes = indexes;
+  }
+
+  toJson(): string {
+    let obj = "{";
+    obj += `"primaryKey": "${this.primaryKey}",`;
+    obj += `"indexes": [`;
+    for (let i = 0; i < this.indexes.length; i++) {
+      obj += `"${this.indexes[i]}"`;
+      if (i < this.indexes.length - 1) {
+        obj += ",";
+      }
+    }
+    obj += "]";
+    obj += "}";
+
+    return obj;
+  }
+}
 
 export class Table {
   public name: string;
@@ -25,8 +52,8 @@ export class Table {
     this.schema = schema;
   }
 
-  public init(primaryKey: string): void {
-    create(this.name, primaryKey, this.schema);
+  public init(option: TableOption): void {
+    create(this.name, this.schema, option);
   }
 
   public select(whereCondition: TableSchema): JSON.Obj {
@@ -195,10 +222,11 @@ export function ptrToString(ptr: i64): string {
 // Wrapped functions
 export function create(
   tableName: string,
-  primaryKey: string,
-  tableSchema: TableSchema
+  tableSchema: TableSchema,
+  option: TableOption
 ): void {
-  createTable(tableName, primaryKey, toStringSchema(tableSchema));
+  consoleLog(option.toJson())
+  createTable(tableName, toStringSchema(tableSchema), option.toJson());
 }
 
 export function selectRow(

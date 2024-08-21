@@ -8,7 +8,7 @@ export declare function valueReturn(str: string): void;
 export declare function panic(str: string): void;
 
 @external("env", "createTable")
-export declare function createTable(tableName: string, primaryKey: string, tableSchema: string): boolean;
+export declare function createTable(tableName: string, tableSchema: string, option: string): boolean;
 
 @external("env", "insertItem")
 export declare function insertItem(tableName: string, values: string): boolean;

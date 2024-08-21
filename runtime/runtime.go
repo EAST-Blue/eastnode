@@ -88,16 +88,16 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 	envBuilder := wazeroRuntime.
 		NewHostModuleBuilder("env").
 		NewFunctionBuilder().
-		WithFunc(func(tableName int32, primaryKey int32, tableSchema int32) int32 {
+		WithFunc(func(tableName int32, tableSchema int32, option int32) int32 {
 			if kind != types.Call {
 				log.Panicln("Cannot call function on view")
 				return 0
 			}
 			tableNameStr := ToString(r.Mod.Memory(), int64(tableName))
-			primaryKeyStr := ToString(r.Mod.Memory(), int64(primaryKey))
 			tableSchemaStr := ToString(r.Mod.Memory(), int64(tableSchema))
+			optionStr := ToString(r.Mod.Memory(), int64(option))
 
-			CreateTable(r.Store, smartIndexAddress, tableNameStr, primaryKeyStr, tableSchemaStr)
+			CreateTable(r.Store, smartIndexAddress, tableNameStr, tableSchemaStr, optionStr)
 
 			return 0
 		}).
