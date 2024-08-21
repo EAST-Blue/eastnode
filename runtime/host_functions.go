@@ -12,9 +12,19 @@ import (
 
 var ContractTableSeparator string = "_"
 
-func CreateTable(s store.Store, contractAddress string, tableName string, primaryKey string, schema string) {
+type TableOption struct {
+	PrimaryKey string
+	Indexes    []string
+}
+
+func CreateTable(s store.Store, contractAddress string, tableName string, schema string, option string) {
 	var ts map[string]interface{}
 	if err := json.Unmarshal([]byte(schema), &ts); err != nil {
+		log.Panicln(err)
+	}
+
+	var opt TableOption
+	if err := json.Unmarshal([]byte(option), &opt); err != nil {
 		log.Panicln(err)
 	}
 
@@ -30,7 +40,7 @@ func CreateTable(s store.Store, contractAddress string, tableName string, primar
 			vType = (*string)(nil)
 		}
 
-		if primaryKey == k {
+		if opt.PrimaryKey == k {
 			instance.AddField(strcase.ToCamel(k), vType, `bun:",pk"`)
 		} else {
 			instance.AddField(strcase.ToCamel(k), vType, "")
@@ -39,7 +49,7 @@ func CreateTable(s store.Store, contractAddress string, tableName string, primar
 
 	newInstance := instance.Build().New()
 
-	s.CreateTable(newInstance, getStateTableName(contractAddress, tableName))
+	s.CreateTable(newInstance, getStateTableName(contractAddress, tableName), opt.Indexes)
 }
 
 func Insert(s store.Store, contractAddress string, tableName string, values string) {

@@ -49,7 +49,7 @@ func sortOutpoints(outpoints []outpoint) {
 
 func TestRuneIndexOutput1(t *testing.T) {
 	defer t.Cleanup(clearRuntimeTestRune)
-	wasmBytes, _ := os.ReadFile("../../example-op-return-rune/smartindex/build/release.wasm")
+	wasmBytes, _ := os.ReadFile("../../runes-smart-index/smartindex/build/release.wasm")
 	wr := getRuneWasmRuntime("../utils/store/test/rune/doltdump_1.sql")
 	_, err := wr.RunWasmFunction("", wasmBytes, "temp", "init", []string{}, types.Call)
 	if err != nil {
@@ -138,7 +138,7 @@ func TestRuneIndexOutput1(t *testing.T) {
 
 func TestRuneIndexOutput2(t *testing.T) {
 	defer t.Cleanup(clearRuntimeTestRune)
-	wasmBytes, _ := os.ReadFile("../../example-op-return-rune/smartindex/build/release.wasm")
+	wasmBytes, _ := os.ReadFile("../../runes-smart-index/smartindex/build/release.wasm")
 	wr := getRuneWasmRuntime("../utils/store/test/rune/doltdump_2.sql")
 	_, err := wr.RunWasmFunction("", wasmBytes, "temp", "init", []string{}, types.Call)
 	if err != nil {
@@ -232,7 +232,7 @@ func TestRuneIndexOutput2(t *testing.T) {
 
 func TestRuneGetBalance(t *testing.T) {
 	defer t.Cleanup(clearRuntimeTestRune)
-	wasmBytes, _ := os.ReadFile("../../example-op-return-rune/smartindex/build/release.wasm")
+	wasmBytes, _ := os.ReadFile("../../runes-smart-index/smartindex/build/release.wasm")
 	wr := getRuneWasmRuntime("../utils/store/test/rune/doltdump_2.sql")
 	_, err := wr.RunWasmFunction("", wasmBytes, "temp", "init", []string{}, types.Call)
 	if err != nil {
@@ -255,7 +255,7 @@ func TestRuneGetBalance(t *testing.T) {
 
 func TestRuneGetOutpointsByRuneId(t *testing.T) {
 	defer t.Cleanup(clearRuntimeTestRune)
-	wasmBytes, _ := os.ReadFile("../../example-op-return-rune/smartindex/build/release.wasm")
+	wasmBytes, _ := os.ReadFile("../../runes-smart-index/smartindex/build/release.wasm")
 	wr := getRuneWasmRuntime("../utils/store/test/rune/doltdump_2.sql")
 	_, err := wr.RunWasmFunction("", wasmBytes, "temp", "init", []string{}, types.Call)
 	if err != nil {
@@ -276,7 +276,7 @@ func TestRuneGetOutpointsByRuneId(t *testing.T) {
 
 func TestRuneGetOutpointsByRuneIdAndAddress(t *testing.T) {
 	defer t.Cleanup(clearRuntimeTestRune)
-	wasmBytes, _ := os.ReadFile("../../example-op-return-rune/smartindex/build/release.wasm")
+	wasmBytes, _ := os.ReadFile("../../runes-smart-index/smartindex/build/release.wasm")
 	wr := getRuneWasmRuntime("../utils/store/test/rune/doltdump_2.sql")
 	_, err := wr.RunWasmFunction("", wasmBytes, "temp", "init", []string{}, types.Call)
 	if err != nil {
