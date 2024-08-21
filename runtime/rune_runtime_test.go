@@ -61,7 +61,7 @@ func TestRuneIndexOutput1(t *testing.T) {
 		t.Error(err)
 	}
 
-	res, err := wr.RunSelectFunction("SELECT * from temp_outpoints", []string{})
+	res, err := wr.RunSelectFunction("SELECT * from temp_outpoints where spent = 'false'", []string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -150,7 +150,7 @@ func TestRuneIndexOutput2(t *testing.T) {
 		t.Error(err)
 	}
 
-	res, err := wr.RunSelectFunction("SELECT * from temp_outpoints", []string{})
+	res, err := wr.RunSelectFunction("SELECT * from temp_outpoints where spent = 'false'", []string{})
 	if err != nil {
 		t.Error(err)
 	}
