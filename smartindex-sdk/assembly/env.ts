@@ -8,7 +8,7 @@ export declare function valueReturn(str: string): void;
 export declare function panic(str: string): void;
 
 @external("env", "createTable")
-export declare function createTable(tableName: string, primaryKey: string, tableSchema: string): boolean;
+export declare function createTable(tableName: string, tableSchema: string, option: string): boolean;
 
 @external("env", "insertItem")
 export declare function insertItem(tableName: string, values: string): boolean;
@@ -36,3 +36,10 @@ export declare function getOutpointsByTransactionHash(tx_hash: string): i32;
 
 @external("env", "contractAddress")
 export declare function contractAddress(): i32;
+
+// TODD: better naming for these function
+@external("env", "getNetwork")
+export declare function envGetNetwork(): i32;
+
+@external("env", "getTransactionV1sByBlockHeight")
+export declare function envGetTransactionV1sByBlockHeight(height: u64): i32;

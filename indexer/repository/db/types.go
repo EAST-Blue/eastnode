@@ -19,7 +19,8 @@ type P2shAsmScripts struct {
 }
 
 type Block struct {
-	Hash     string `gorm:"index:idx_hash" json:"hash"`
+	Hash string `gorm:"index:idx_hash" json:"hash"`
+	// TODO: need to add index for height
 	Height   uint64 `json:"height"`
 	IsOrphan bool   `json:"is_orphan"`
 
@@ -35,12 +36,16 @@ type Transaction struct {
 	Hash     string `gorm:"index:idx_hash;unique" json:"hash"`
 	LockTime uint32 `json:"lock_time"`
 	Version  int32  `json:"version"`
-	Safe     bool   `json:"safe"`
+	// TODO: what's definition of safe?
+	// - safe utxo: safe to spend
+	Safe bool `json:"safe"`
 
 	BlockID     uint   `json:"block_id"`
-	BlockHash   string `json:"block_hash"`
+	BlockHash   string `gorm:"index:idx_block_hash_index,hash:true,priority:1" json:"block_hash"`
 	BlockHeight uint64 `json:"block_height"`
-	BlockIndex  uint32 `json:"block_index"`
+
+	// TODO: need to add index for block_index
+	BlockIndex uint32 `gorm:"index:idx_block_hash_index,hash:true,priority:2" json:"block_index"`
 }
 
 type OutPoint struct {
@@ -106,6 +111,29 @@ type Vout struct {
 
 	P2shAsmScripts *P2shAsmScripts `json:"p2sh_asm_scripts" gorm:"-"`
 	PkAsmScripts   *[]string       `json:"pk_asm_scripts" gorm:"-"`
+}
+
+type VinV1 struct {
+	TxHash string `json:"tx_hash"`
+	Index  uint32 `json:"index"`
+	Value  uint64 `json:"value"`
+}
+
+type VoutV1 struct {
+	TxHash   string `json:"tx_hash"`
+	Index    uint32 `json:"index"`
+	Address  string `json:"address"`
+	PkScript string `json:"pk_script"`
+	Value    uint64 `json:"value"`
+}
+
+type TransactionV1 struct {
+	Hash     string `json:"hash"`
+	LockTime uint32 `json:"lock_time"`
+	Version  uint32 `json:"version"`
+
+	Vins  []VinV1  `json:"vins"`
+	Vouts []VoutV1 `json:"vouts"`
 }
 
 func NewDB(dialector gorm.Dialector, opts ...gorm.Option) (*gorm.DB, error) {
