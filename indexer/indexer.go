@@ -102,6 +102,7 @@ func (i *Indexer) IndexBlocks(fromBlockHeight int32, toBlockHeight int32) error 
 		commitMessage := fmt.Sprintf("Indexed block %d", blockHeight)
 		i.DbRepo.Db.Exec("CALL DOLT_COMMIT('--allow-empty', '-Am', ?);", commitMessage)
 
+		// Sleep because of RPC rate limit
 		i, err := strconv.Atoi(os.Getenv("INDEXER_SLEEP_TIME"))
 		if err != nil {
 			return err

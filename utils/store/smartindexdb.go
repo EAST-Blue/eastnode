@@ -12,7 +12,7 @@ import (
 	"github.com/uptrace/bun/extra/bundebug"
 )
 
-func (s *Store) CreateTable(model interface{}, tableName string) {
+func (s *Store) CreateTable(model interface{}, tableName string, indexes []string) {
 	ctx := context.Background()
 
 	if res, err := s.
@@ -24,6 +24,21 @@ func (s *Store) CreateTable(model interface{}, tableName string) {
 		log.Panicln(err)
 	} else {
 		fmt.Println("[+] Create table: ", res)
+	}
+
+	for _, column := range indexes {
+		if res, err := s.
+			BunInstance.
+			NewCreateIndex().
+			Model(model).
+			ModelTableExpr(tableName).
+			Index(fmt.Sprintf("%s_idx", column)).
+			Column(column).
+			Exec(ctx); err != nil {
+			log.Panicln(err)
+		} else {
+			fmt.Println("[+] Create index: ", res)
+		}
 	}
 }
 
