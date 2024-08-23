@@ -43,7 +43,7 @@ func CreateTable(s store.Store, contractAddress string, tableName string, schema
 		if opt.PrimaryKey == k {
 			instance.AddField(strcase.ToCamel(k), vType, `bun:",pk"`)
 		} else {
-			instance.AddField(strcase.ToCamel(k), vType, "")
+			instance.AddField(strcase.ToCamel(k), vType, `bun:"type:mediumtext"`)
 		}
 	}
 
