@@ -9,8 +9,39 @@ import {
   insertItem,
   selectItems,
   updateItem,
+  envGetTransactionV1sByBlockHeight,
+  envGetNetwork,
+  consoleLog,
 } from "./env";
 import { Value } from "assemblyscript-json/assembly/JSON";
+import { TransactionV1, VinV1, VoutV1 } from "./types";
+import { Network } from "./constants";
+
+export class TableOption {
+  primaryKey: string;
+  // Default indexes are using btree, TODO: add more options
+  indexes: string[];
+  constructor(primaryKey: string, indexes: string[]) {
+    this.primaryKey = primaryKey;
+    this.indexes = indexes;
+  }
+
+  toJson(): string {
+    let obj = "{";
+    obj += `"primaryKey": "${this.primaryKey}",`;
+    obj += `"indexes": [`;
+    for (let i = 0; i < this.indexes.length; i++) {
+      obj += `"${this.indexes[i]}"`;
+      if (i < this.indexes.length - 1) {
+        obj += ",";
+      }
+    }
+    obj += "]";
+    obj += "}";
+
+    return obj;
+  }
+}
 
 export class Table {
   public name: string;
@@ -21,8 +52,8 @@ export class Table {
     this.schema = schema;
   }
 
-  public init(primaryKey: string): void {
-    create(this.name, primaryKey, this.schema);
+  public init(option: TableOption): void {
+    create(this.name, this.schema, option);
   }
 
   public select(whereCondition: TableSchema): JSON.Obj {
@@ -191,10 +222,11 @@ export function ptrToString(ptr: i64): string {
 // Wrapped functions
 export function create(
   tableName: string,
-  primaryKey: string,
-  tableSchema: TableSchema
+  tableSchema: TableSchema,
+  option: TableOption
 ): void {
-  createTable(tableName, primaryKey, toStringSchema(tableSchema));
+  consoleLog(option.toJson())
+  createTable(tableName, toStringSchema(tableSchema), option.toJson());
 }
 
 export function selectRow(
@@ -341,5 +373,78 @@ export function getTxsByBlockHeight(block_height: u64): Transaction[] {
 }
 
 export function getContractAddress(): string {
-  return  ptrToString(contractAddress());
+  return ptrToString(contractAddress());
+}
+
+export function getTransactionV1sByBlockHeight(height: u64): TransactionV1[] {
+  const transactions: TransactionV1[] = [];
+
+  const ptr = envGetTransactionV1sByBlockHeight(height);
+  const trxsJson = toJsonArray(ptrToString(ptr));
+
+  for (let i = 0; i < trxsJson.valueOf().length; i++) {
+    const trxJson = trxsJson.valueOf()[i];
+
+    const hash = getResultFromJson(trxJson as JSON.Obj, "hash", "string");
+    const lockTime = <u32>(
+      parseInt(getResultFromJson(trxJson as JSON.Obj, "lock_time", "int64"))
+    );
+    const version = <u32>(
+      parseInt(getResultFromJson(trxJson as JSON.Obj, "version", "int64"))
+    );
+
+    const vinsJson = (trxJson as JSON.Obj).getArr("vins");
+    const vins: VinV1[] = [];
+    if (vinsJson) {
+      for (let j = 0; j < vinsJson.valueOf().length; j++) {
+        const vin = vinsJson.valueOf()[j];
+        vins.push(
+          new VinV1(
+            getResultFromJson(vin as JSON.Obj, "tx_hash", "string"),
+            <u32>parseInt(getResultFromJson(vin as JSON.Obj, "index", "int64")),
+            <u64>parseInt(getResultFromJson(vin as JSON.Obj, "value", "int64"))
+          )
+        );
+      }
+    }
+
+    const voutsJson = (trxJson as JSON.Obj).getArr("vouts");
+    const vouts: VoutV1[] = [];
+    if (voutsJson) {
+      for (let j = 0; j < voutsJson.valueOf().length; j++) {
+        const vout = voutsJson.valueOf()[j];
+        vouts.push(
+          new VoutV1(
+            getResultFromJson(vout as JSON.Obj, "tx_hash", "string"),
+            <u32>(
+              parseInt(getResultFromJson(vout as JSON.Obj, "index", "int64"))
+            ),
+            getResultFromJson(vout as JSON.Obj, "address", "string"),
+            getResultFromJson(vout as JSON.Obj, "pk_script", "string"),
+            <u64>parseInt(getResultFromJson(vout as JSON.Obj, "value", "int64"))
+          )
+        );
+      }
+    }
+
+    transactions.push(
+      new TransactionV1(hash, <u32>lockTime, <u32>version, vins, vouts)
+    );
+  }
+
+  return transactions;
+}
+
+export function getNetwork(): Network {
+  const networkStr = ptrToString(envGetNetwork());
+
+  if (networkStr === "mainnet") {
+    return Network.Mainnet;
+  } else if (networkStr === "testnet") {
+    return Network.Testnet;
+  } else if (networkStr === "signet") {
+    return Network.Signet;
+  } else {
+    return Network.Regtest;
+  }
 }
