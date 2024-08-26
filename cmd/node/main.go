@@ -34,7 +34,7 @@ func main() {
 	scheduler := indexer.NewScheduler(indexerRepo)
 
 	go func() {
-		scheduler.CheckBlock()
+		scheduler.Start()
 	}()
 
 	// rpc

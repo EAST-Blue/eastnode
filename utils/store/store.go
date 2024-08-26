@@ -58,11 +58,11 @@ func GetInstance(instanceType InstanceType) *Store {
 			return sSmartIndex
 		} else if instanceType == ChainDB {
 			sChain = &Store{Instance: doltInstance}
-			sChain.InitChainDb()
+			sChain.InitChainDb("/db")
 			return sChain
 		} else {
 			sIndexer = &Store{Instance: doltInstance}
-			sIndexer.InitIndexerDb()
+			sIndexer.InitIndexerDb("/db")
 			return sIndexer
 		}
 	}

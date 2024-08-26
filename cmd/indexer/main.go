@@ -14,5 +14,5 @@ func main() {
 	indexerRepo := indexer.NewIndexer(dbRepo, bitcoinRepo)
 	scheduler := indexer.NewScheduler(indexerRepo)
 
-	scheduler.CheckBlock()
+	scheduler.Start()
 }
