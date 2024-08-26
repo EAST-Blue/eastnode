@@ -22,10 +22,6 @@ var (
 	LE = binary.LittleEndian
 )
 
-const (
-	SizeOffset = -4
-)
-
 type Address string
 
 type WasmRuntime struct {
@@ -36,12 +32,12 @@ type WasmRuntime struct {
 
 // ref: https://github.com/RPG-18/wasmer-go-assemblyscript/blob/main/assemblyscript/go.ts
 // https://github.com/tetratelabs/wazero/blob/54cee893dac6fb85d9418b7f1e156974e7e05b00/imports/assemblyscript/assemblyscript.go#L302
-func ToString(memory api.Memory, ptr int64) string {
+func ToString(memory api.Memory, ptr uint32) string {
 	data, err := memory.Read(0, memory.Size())
 	if err != true {
 		log.Panicln("read failed")
 	}
-	len := LE.Uint32(data[ptr+SizeOffset:]) >> 1
+	len := LE.Uint32(data[ptr-4:]) >> 1
 	buf := bytes.NewReader(data[ptr:])
 
 	tmp := make([]uint16, 0, len)
@@ -88,14 +84,14 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 	envBuilder := wazeroRuntime.
 		NewHostModuleBuilder("env").
 		NewFunctionBuilder().
-		WithFunc(func(tableName int32, tableSchema int32, option int32) int32 {
+		WithFunc(func(tableName uint32, tableSchema uint32, option uint32) uint32 {
 			if kind != types.Call {
 				log.Panicln("Cannot call function on view")
 				return 0
 			}
-			tableNameStr := ToString(r.Mod.Memory(), int64(tableName))
-			tableSchemaStr := ToString(r.Mod.Memory(), int64(tableSchema))
-			optionStr := ToString(r.Mod.Memory(), int64(option))
+			tableNameStr := ToString(r.Mod.Memory(), tableName)
+			tableSchemaStr := ToString(r.Mod.Memory(), tableSchema)
+			optionStr := ToString(r.Mod.Memory(), option)
 
 			CreateTable(r.Store, smartIndexAddress, tableNameStr, tableSchemaStr, optionStr)
 
@@ -103,13 +99,13 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("createTable").
 		NewFunctionBuilder().
-		WithFunc(func(tableName int32, values int32) int32 {
+		WithFunc(func(tableName uint32, values uint32) uint32 {
 			if kind != types.Call {
 				log.Panicln("Cannot call function on view")
 				return 0
 			}
-			tableNameStr := ToString(r.Mod.Memory(), int64(tableName))
-			valuesStr := ToString(r.Mod.Memory(), int64(values))
+			tableNameStr := ToString(r.Mod.Memory(), tableName)
+			valuesStr := ToString(r.Mod.Memory(), values)
 
 			Insert(r.Store, smartIndexAddress, tableNameStr, valuesStr)
 
@@ -117,14 +113,14 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("insertItem").
 		NewFunctionBuilder().
-		WithFunc(func(tableName int32, whereCondition int32, values int32) int32 {
+		WithFunc(func(tableName uint32, whereCondition uint32, values uint32) uint32 {
 			if kind != types.Call {
 				log.Panicln("Cannot call function on view")
 				return 0
 			}
-			tableNameStr := ToString(r.Mod.Memory(), int64(tableName))
-			whereConditionStr := ToString(r.Mod.Memory(), int64(whereCondition))
-			valuesStr := ToString(r.Mod.Memory(), int64(values))
+			tableNameStr := ToString(r.Mod.Memory(), tableName)
+			whereConditionStr := ToString(r.Mod.Memory(), whereCondition)
+			valuesStr := ToString(r.Mod.Memory(), values)
 
 			Update(r.Store, smartIndexAddress, tableNameStr, whereConditionStr, valuesStr)
 
@@ -132,13 +128,13 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("updateItem").
 		NewFunctionBuilder().
-		WithFunc(func(tableName int32, whereCondition int32) int32 {
+		WithFunc(func(tableName uint32, whereCondition uint32) uint32 {
 			if kind != types.Call {
 				log.Panicln("Cannot call function on view")
 				return 0
 			}
-			tableNameStr := ToString(r.Mod.Memory(), int64(tableName))
-			whereConditionStr := ToString(r.Mod.Memory(), int64(whereCondition))
+			tableNameStr := ToString(r.Mod.Memory(), tableName)
+			whereConditionStr := ToString(r.Mod.Memory(), whereCondition)
 
 			Delete(r.Store, smartIndexAddress, tableNameStr, whereConditionStr)
 
@@ -146,9 +142,9 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("deleteItem").
 		NewFunctionBuilder().
-		WithFunc(func(tableName int32, whereCondition int32) uint32 {
-			tableNameStr := ToString(r.Mod.Memory(), int64(tableName))
-			whereConditionStr := ToString(r.Mod.Memory(), int64(whereCondition))
+		WithFunc(func(tableName uint32, whereCondition uint32) uint32 {
+			tableNameStr := ToString(r.Mod.Memory(), tableName)
+			whereConditionStr := ToString(r.Mod.Memory(), whereCondition)
 
 			result, err := Select(r.Store, smartIndexAddress, tableNameStr, whereConditionStr)
 
@@ -165,9 +161,9 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("selectItem").
 		NewFunctionBuilder().
-		WithFunc(func(statement int32, args int32) uint32 {
-			statementStr := ToString(r.Mod.Memory(), int64(statement))
-			argsStr := ToString(r.Mod.Memory(), int64(args))
+		WithFunc(func(statement uint32, args uint32) uint32 {
+			statementStr := ToString(r.Mod.Memory(), statement)
+			argsStr := ToString(r.Mod.Memory(), args)
 
 			var argsArray []string
 			json.Unmarshal([]byte(argsStr), &argsArray)
@@ -201,8 +197,8 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("getBlockByHeight").
 		NewFunctionBuilder().
-		WithFunc(func(blockHash int32) uint32 {
-			blockHashStr := ToString(r.Mod.Memory(), int64(blockHash))
+		WithFunc(func(blockHash uint32) uint32 {
+			blockHashStr := ToString(r.Mod.Memory(), blockHash)
 			result, err := r.IndexerDbRepo.GetTransactionsByBlockHash(blockHashStr)
 			if err != nil {
 				panic(err)
@@ -216,8 +212,8 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("getTransactionsByBlockHash").
 		NewFunctionBuilder().
-		WithFunc(func(transactionHash int32) uint32 {
-			transactionHashStr := ToString(r.Mod.Memory(), int64(transactionHash))
+		WithFunc(func(transactionHash uint32) uint32 {
+			transactionHashStr := ToString(r.Mod.Memory(), transactionHash)
 			result, err := r.IndexerDbRepo.GetOutpointsByTransactionHash(transactionHashStr)
 			if err != nil {
 				panic(err)
@@ -243,8 +239,8 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("getTransactionV1sByBlockHeight").
 		NewFunctionBuilder().
-		WithFunc(func(strPtr int32) {
-			str := ToString(r.Mod.Memory(), int64(strPtr))
+		WithFunc(func(strPtr uint32) {
+			str := ToString(r.Mod.Memory(), strPtr)
 
 			*output = str
 		}).
@@ -257,15 +253,15 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("contractAddress").
 		NewFunctionBuilder().
-		WithFunc(func(strPtr int32) {
-			str := ToString(r.Mod.Memory(), int64(strPtr))
+		WithFunc(func(strPtr uint32) {
+			str := ToString(r.Mod.Memory(), strPtr)
 
 			log.Panicln(str)
 		}).
 		Export("panic").
 		NewFunctionBuilder().
-		WithFunc(func(strPtr int32) {
-			str := ToString(r.Mod.Memory(), int64(strPtr))
+		WithFunc(func(strPtr uint32) {
+			str := ToString(r.Mod.Memory(), strPtr)
 
 			fmt.Println("consoleLog", str)
 		}).
