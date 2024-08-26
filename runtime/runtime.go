@@ -33,12 +33,17 @@ type WasmRuntime struct {
 // ref: https://github.com/RPG-18/wasmer-go-assemblyscript/blob/main/assemblyscript/go.ts
 // https://github.com/tetratelabs/wazero/blob/54cee893dac6fb85d9418b7f1e156974e7e05b00/imports/assemblyscript/assemblyscript.go#L302
 func ToString(memory api.Memory, ptr uint32) string {
-	data, err := memory.Read(0, memory.Size())
+	data, err := memory.Read(ptr-4, 8)
 	if err != true {
 		log.Panicln("read failed")
 	}
-	len := LE.Uint32(data[ptr-4:]) >> 1
-	buf := bytes.NewReader(data[ptr:])
+	len := LE.Uint32(data) >> 1
+
+	dataBuf, err := memory.Read(ptr, len*2)
+	if err != true {
+		log.Panicln("read failed")
+	}
+	buf := bytes.NewReader(dataBuf)
 
 	tmp := make([]uint16, 0, len)
 	for i := uint32(0); i < len; i++ {
