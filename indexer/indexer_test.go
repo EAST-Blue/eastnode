@@ -19,7 +19,7 @@ func TestScheduler_Start(t *testing.T) {
 	clearIndexerTest()
 
 	// Setup
-	instance := utils.GetFakeInstance(utils.IndexerDB)
+	instance := utils.GetFakeInstance(utils.IndexerDB, "../utils/store/test/doltdump.sql")
 	dbRepo := db.NewDBRepository(instance.Gorm)
 	mockBitcoinRepo := bitcoin.NewMockBitcoinRepo()
 
@@ -64,7 +64,7 @@ func TestScheduler_ReorgSimulation(t *testing.T) {
 	clearIndexerTest()
 
 	// Setup
-	instance := utils.GetFakeInstance(utils.IndexerDB)
+	instance := utils.GetFakeInstance(utils.IndexerDB, "../utils/store/test/doltdump.sql")
 	dbRepo := db.NewDBRepository(instance.Gorm)
 	mockBitcoinRepo := bitcoin.NewMockBitcoinRepo()
 
