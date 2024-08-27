@@ -165,15 +165,15 @@ export class VinV2 {
   static fromJson(jsonObj: JSON.Obj): VinV2 {
     return new VinV2(
       getResultFromJson(jsonObj, "tx_hash", "string"),
-      getResultFromJson(jsonObj, "tx_index", "string"),
+      getResultFromJson(jsonObj, "tx_index", "int64"),
       getResultFromJson(jsonObj, "block_hash", "string"),
       getResultFromJson(jsonObj, "block_height", "string"),
-      getResultFromJson(jsonObj, "block_tx_index", "string"),
+      getResultFromJson(jsonObj, "block_tx_index", "int64"),
       u64(parseInt(getResultFromJson(jsonObj, "sequence", "int64"))),
       getResultFromJson(jsonObj, "signature_script", "string"),
       getResultFromJson(jsonObj, "witness", "string"),
       getResultFromJson(jsonObj, "funding_tx_hash", "string"),
-      getResultFromJson(jsonObj, "funding_tx_index", "string"),
+      getResultFromJson(jsonObj, "funding_tx_index", "int64"),
       getResultFromJson(jsonObj, "pk_script", "string"),
       u64(parseInt(getResultFromJson(jsonObj, "value", "int64"))),
       getResultFromJson(jsonObj, "spender", "string"),
@@ -229,10 +229,10 @@ export class VoutV2 {
   static fromJson(jsonObj: JSON.Obj): VoutV2 {
     return new VoutV2(
       getResultFromJson(jsonObj, "tx_hash", "string"),
-      getResultFromJson(jsonObj, "tx_index", "string"),
+      getResultFromJson(jsonObj, "tx_index", "int64"),
       getResultFromJson(jsonObj, "block_hash", "string"),
       getResultFromJson(jsonObj, "block_height", "string"),
-      getResultFromJson(jsonObj, "block_tx_index", "string"),
+      getResultFromJson(jsonObj, "block_tx_index", "int64"),
       getResultFromJson(jsonObj, "pk_script", "string"),
       u64(parseInt(getResultFromJson(jsonObj, "value", "int64"))),
       getResultFromJson(jsonObj, "spender", "string"),
