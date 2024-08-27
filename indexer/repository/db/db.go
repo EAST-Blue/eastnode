@@ -474,6 +474,41 @@ func (d *DBRepository) GetTransactionV2s(hash string) ([]*TransactionV2, error) 
 	voutV2s := map[string][]Vout{}
 
 	for _, vin := range vins {
+
+		// TODO: refactor
+
+		if vin.SignatureScript != "" {
+			scripts, err := ParseP2shSigHexToAsms(vin.SignatureScript)
+			if err == nil {
+				vin.P2shAsmScripts = scripts
+			}
+		}
+
+		if vin.PkScript != "" {
+			bs, err := bscript.NewFromHexString(vin.PkScript)
+			if err == nil {
+				asm, err := bs.ToASM()
+				if err == nil {
+					scripts := strings.Split(asm, " ")
+					vin.PkAsmScripts = &scripts
+				}
+			}
+
+		}
+
+		if vin.Witness != "" {
+			witnesses := strings.Split(vin.Witness, ",")
+			if len(witnesses) == 3 {
+				bs, err := bscript.NewFromHexString(witnesses[1])
+				if err == nil {
+					asm, err := bs.ToASM()
+					if err == nil {
+						scripts := strings.Split(asm, " ")
+						vin.WitnessAsmScripts = &scripts
+					}
+				}
+			}
+		}
 		vinV2s[vin.TxHash] = append(vinV2s[vin.TxHash], *vin)
 	}
 
