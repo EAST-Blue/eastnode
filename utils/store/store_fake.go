@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 
-	bolt "go.etcd.io/bbolt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -55,68 +54,14 @@ func GetFakeInstanceCustom(instanceType InstanceType, dumpFile string) *Store {
 			sSmartIndex.Gorm = db
 			sSmartIndex.InitWasmDB()
 			return sSmartIndex
-		} else {
+		} else if instanceType == ChainDB {
 			sChain = &Store{Instance: doltInstance}
-
-			sChain.Instance.Exec(`
-				CREATE DATABASE core;
-				USE core;
-				CREATE TABLE kv (
-					k varchar(255),
-					v varchar(255),
-					primary key(k)
-				);
-				CREATE TABLE transactions (
-					id VARCHAR(255),
-					block_id BIGINT,
-					signer VARCHAR(255),
-					receiver VARCHAR(255),
-					actions VARBINARY(1024),
-					created_at BIGINT,
-					primary key(id)
-				);
-				CREATE TABLE smart_index (
-					smart_index_address VARCHAR(255),
-					owner_address VARCHAR(255),
-					wasm_blob LONGBLOB,
-					primary key(smart_index_address)
-				);
-				CREATE TABLE transaction_logs (
-					id VARCHAR(255),
-					statuses JSON,
-					logs JSON,
-					primary key(id)
-				);
-				CALL DOLT_COMMIT('-Am', 'init core schema');
-			`)
-
-			kv, err := bolt.Open("db_test/chain.db", 0600, nil)
-			if err != nil {
-				panic(err)
-			}
-
-			// init key/value store
-			err = kv.Update(func(tx *bolt.Tx) error {
-				_, err := tx.CreateBucketIfNotExists([]byte("blocks"))
-
-				if err != nil {
-					return err
-				}
-
-				_, err = tx.CreateBucketIfNotExists([]byte("common"))
-
-				if err != nil {
-					return err
-				}
-
-				return nil
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			sChain.KV = kv
+			sChain.InitChainDb("/db_test")
 			return sChain
+		} else {
+			sIndexer = &Store{Instance: doltInstance}
+			sIndexer.InitIndexerDb("/db_test")
+			return sIndexer
 		}
 	}
 }

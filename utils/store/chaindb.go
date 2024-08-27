@@ -10,9 +10,12 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func (s *Store) InitChainDb() {
+func (s *Store) InitChainDb(dbPath string) {
+	if dbPath == "" {
+		dbPath = "/db"
+	}
 	// init core schema
-	if _, err := os.Stat(utils.Cwd() + "/db/core"); os.IsNotExist(err) {
+	if _, err := os.Stat(utils.Cwd() + dbPath + "/core"); os.IsNotExist(err) {
 		fmt.Println("Runtime is initializing...")
 		_, err := s.Instance.Exec(`
 			CREATE DATABASE core;
@@ -60,7 +63,7 @@ func (s *Store) InitChainDb() {
 
 	log.Println("[+] Chain database instance is running")
 
-	kv, err := bolt.Open("db/chain.db", 0600, nil)
+	kv, err := bolt.Open(utils.Cwd()+dbPath+"/chain.db", 0600, nil)
 	if err != nil {
 		panic(err)
 	}

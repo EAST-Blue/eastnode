@@ -226,7 +226,15 @@ func (d *DBRepository) CreateVoutWithTx(tx *gorm.DB, outpoint *Vout) error {
 
 func (d *DBRepository) GetBlockByHeight(height int64) (*Block, error) {
 	block := &Block{}
-	if resp := d.Db.First(block, "height = ?", height); resp.Error != nil {
+	if resp := d.Db.First(block, "height = ? AND is_orphan = ?", height, false); resp.Error != nil {
+		return block, resp.Error
+	}
+	return block, nil
+}
+
+func (d *DBRepository) GetBlockByHeightWithIsOrphan(height int64, isOrphan bool) (*Block, error) {
+	block := &Block{}
+	if resp := d.Db.First(block, "height = ? AND is_orphan = ?", height, isOrphan); resp.Error != nil {
 		return block, resp.Error
 	}
 	return block, nil
@@ -330,6 +338,15 @@ func (d *DBRepository) GetOutpointsByTransactionHash(transactionHash string) ([]
 	}
 
 	return outpoints, nil
+}
+
+func (d *DBRepository) UpdateBlocksAsOrphan(height int32) error {
+	// Update blocks
+	if err := d.Db.Model(&Block{}).Where("height >= ?", height).Update("is_orphan", true).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (d *DBRepository) GetBlockHeightByHash(height uint64) (*string, error) {
