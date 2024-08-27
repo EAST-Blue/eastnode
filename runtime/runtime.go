@@ -244,6 +244,19 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 		}).
 		Export("getTransactionV1sByBlockHeight").
 		NewFunctionBuilder().
+		WithFunc(func(height uint64) uint32 {
+			result, err := r.IndexerDbRepo.GetTransactionV2sByBlockHeight(height)
+			if err != nil {
+				panic(err)
+			}
+			serializedResult, _ := json.Marshal(result)
+
+			ptr := r.writeString(r.Mod.Memory(), string(serializedResult))
+
+			return uint32(ptr)
+		}).
+		Export("getTransactionV2sByBlockHeight").
+		NewFunctionBuilder().
 		WithFunc(func(strPtr uint32) {
 			str := ToString(r.Mod.Memory(), strPtr)
 

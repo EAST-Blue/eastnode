@@ -17,8 +17,14 @@ import {
   toJsonArray,
   JSON,
   getTxsByBlockHeight,
-  getContractAddress
+  getContractAddress,
 } from "@east-bitcoin-lib/smartindex-sdk/assembly";
+
+import { getTransactionV2sByBlockHeight } from "@east-bitcoin-lib/smartindex-sdk/assembly/sdk";
+import {
+  getUTXOByTransactionHash,
+  TableOption,
+} from "@east-bitcoin-lib/smartindex-sdk/assembly/sdk";
 export { allocate } from "@east-bitcoin-lib/smartindex-sdk/assembly/external";
 
 const ordinalsTable = new Table("ordinals", [
@@ -28,7 +34,7 @@ const ordinalsTable = new Table("ordinals", [
 ]);
 
 export function init(): void {
-  ordinalsTable.init("id");
+  ordinalsTable.init(new TableOption("id", []));
 }
 
 export function getOrdinal(id_ptr: i32): string {
@@ -83,6 +89,27 @@ export function index(block_height_ptr: i32): void {
     consoleLog("p2shAsmScripts: " + utxos[i].p2shAsmScripts.join(" "));
     consoleLog("pkAsmScripts: " + utxos[i].pkAsmScripts.join(" "));
     consoleLog("witnessAsmScripts: " + utxos[i].witnessAsmScripts.join(" "));
+  }
+
+  const txs = getTransactionV2sByBlockHeight(block_height);
+
+  for (let i = 0; i < txs.length; i++) {
+    consoleLog("vins");
+    for (let j = 0; j < txs[i].vins.length; j++) {
+      consoleLog("txHash: " + txs[i].vins[j].txHash);
+      consoleLog("fundingTxHash: " + txs[i].vins[j].fundingTxHash);
+      consoleLog("p2shAsmScripts: " + txs[i].vins[j].p2shAsmScripts.join(" "));
+      consoleLog("pkAsmScripts: " + txs[i].vins[j].pkAsmScripts.join(" "));
+      consoleLog(
+        "witnessAsmScripts: " + txs[i].vins[j].witnessAsmScripts.join(" ")
+      );
+    }
+    consoleLog("vouts");
+    for (let j = 0; j < txs[i].vouts.length; j++) {
+      consoleLog("txHash: " + txs[i].vouts[j].txHash);
+      consoleLog("p2shAsmScripts: " + txs[i].vouts[j].p2shAsmScripts.join(" "));
+      consoleLog("pkAsmScripts: " + txs[i].vouts[j].pkAsmScripts.join(" "));
+    }
   }
 }
 

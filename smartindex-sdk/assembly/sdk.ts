@@ -10,11 +10,12 @@ import {
   selectItems,
   updateItem,
   envGetTransactionV1sByBlockHeight,
+  envGetTransactionV2sByBlockHeight,
   envGetNetwork,
   consoleLog,
 } from "./env";
 import { Value } from "assemblyscript-json/assembly/JSON";
-import { TransactionV1, VinV1, VoutV1 } from "./types";
+import { TransactionV1, VinV1, VinV2, VoutV1, VoutV2 } from "./types";
 import { Network } from "./constants";
 
 export class TableOption {
@@ -161,6 +162,55 @@ export class UTXO {
     this.pkAsmScripts = pkAsmScripts.split(";");
     this.witnessAsmScripts = witnessAsmScripts.split(";");
   }
+
+  static fromJson(jsonObj: JSON.Obj): UTXO {
+    return new UTXO(
+      getResultFromJson(jsonObj, "id", "int64"),
+      getResultFromJson(jsonObj, "value", "int64"),
+      getResultFromJson(jsonObj, "spending_tx_hash", "string"),
+      getResultFromJson(jsonObj, "spending_tx_index", "int64"),
+      getResultFromJson(jsonObj, "spending_block_hash", "string"),
+      getResultFromJson(jsonObj, "spending_block_height", "int64"),
+      getResultFromJson(jsonObj, "spending_block_tx_index", "int64"),
+      getResultFromJson(jsonObj, "sequence", "int64"),
+      getResultFromJson(jsonObj, "funding_tx_hash", "string"),
+      getResultFromJson(jsonObj, "funding_tx_index", "int64"),
+      getResultFromJson(jsonObj, "funding_block_hash", "string"),
+      getResultFromJson(jsonObj, "funding_block_height", "int64"),
+      getResultFromJson(jsonObj, "funding_block_tx_index", "int64"),
+      getResultFromJson(jsonObj, "signature_script", "string"),
+      getResultFromJson(jsonObj, "pk_script", "string"),
+      getResultFromJson(jsonObj, "witness", "string"),
+      getResultFromJson(jsonObj, "spender", "string"),
+      getResultFromJson(jsonObj, "type", "string"),
+      getResultFromJson(jsonObj, "p2sh_asm_scripts", "array"),
+      getResultFromJson(jsonObj, "pk_asm_scripts", "array"),
+      getResultFromJson(jsonObj, "witness_asm_scripts", "array")
+    );
+  }
+}
+
+export class TransactionV2 {
+  hash: string;
+  lockTime: u32;
+  version: u32;
+
+  vins: VinV2[];
+  vouts: VoutV2[];
+
+  constructor(
+    hash: string,
+    lockTime: u32,
+    version: u32,
+    vins: VinV2[],
+    vouts: VoutV2[]
+  ) {
+    this.hash = hash;
+    this.lockTime = lockTime;
+    this.version = version;
+    this.vins = vins;
+    this.vouts = vouts;
+  }
 }
 
 export type TableSchema = Column[];
@@ -225,7 +275,7 @@ export function create(
   tableSchema: TableSchema,
   option: TableOption
 ): void {
-  consoleLog(option.toJson())
+  consoleLog(option.toJson());
   createTable(tableName, toStringSchema(tableSchema), option.toJson());
 }
 
@@ -268,55 +318,7 @@ export function getUTXOByTransactionHash(hash: string): UTXO[] {
     const jsonObj = jsonUTXOs.valueOf()[i];
 
     if (jsonObj.isObj) {
-      UTXOs.push(
-        new UTXO(
-          getResultFromJson(jsonObj as JSON.Obj, "id", "int64"),
-          getResultFromJson(jsonObj as JSON.Obj, "value", "int64"),
-          getResultFromJson(jsonObj as JSON.Obj, "spending_tx_hash", "string"),
-          getResultFromJson(jsonObj as JSON.Obj, "spending_tx_index", "int64"),
-          getResultFromJson(
-            jsonObj as JSON.Obj,
-            "spending_block_hash",
-            "string"
-          ),
-          getResultFromJson(
-            jsonObj as JSON.Obj,
-            "spending_block_height",
-            "int64"
-          ),
-          getResultFromJson(
-            jsonObj as JSON.Obj,
-            "spending_block_tx_index",
-            "int64"
-          ),
-          getResultFromJson(jsonObj as JSON.Obj, "sequence", "int64"),
-          getResultFromJson(jsonObj as JSON.Obj, "funding_tx_hash", "string"),
-          getResultFromJson(jsonObj as JSON.Obj, "funding_tx_index", "int64"),
-          getResultFromJson(
-            jsonObj as JSON.Obj,
-            "funding_block_hash",
-            "string"
-          ),
-          getResultFromJson(
-            jsonObj as JSON.Obj,
-            "funding_block_height",
-            "int64"
-          ),
-          getResultFromJson(
-            jsonObj as JSON.Obj,
-            "funding_block_tx_index",
-            "int64"
-          ),
-          getResultFromJson(jsonObj as JSON.Obj, "signature_script", "string"),
-          getResultFromJson(jsonObj as JSON.Obj, "pk_script", "string"),
-          getResultFromJson(jsonObj as JSON.Obj, "witness", "string"),
-          getResultFromJson(jsonObj as JSON.Obj, "spender", "string"),
-          getResultFromJson(jsonObj as JSON.Obj, "type", "string"),
-          getResultFromJson(jsonObj as JSON.Obj, "p2sh_asm_scripts", "array"),
-          getResultFromJson(jsonObj as JSON.Obj, "pk_asm_scripts", "array"),
-          getResultFromJson(jsonObj as JSON.Obj, "witness_asm_scripts", "array")
-        )
-      );
+      UTXOs.push(UTXO.fromJson(jsonObj as JSON.Obj));
     }
   }
 
@@ -429,6 +431,49 @@ export function getTransactionV1sByBlockHeight(height: u64): TransactionV1[] {
 
     transactions.push(
       new TransactionV1(hash, <u32>lockTime, <u32>version, vins, vouts)
+    );
+  }
+
+  return transactions;
+}
+
+export function getTransactionV2sByBlockHeight(height: u64): TransactionV2[] {
+  const transactions: TransactionV2[] = [];
+
+  const ptr = envGetTransactionV2sByBlockHeight(height);
+  const trxsJson = toJsonArray(ptrToString(ptr));
+
+  for (let i = 0; i < trxsJson.valueOf().length; i++) {
+    const trxJson = trxsJson.valueOf()[i];
+
+    const hash = getResultFromJson(trxJson as JSON.Obj, "hash", "string");
+    const lockTime = <u32>(
+      parseInt(getResultFromJson(trxJson as JSON.Obj, "lock_time", "int64"))
+    );
+    const version = <u32>(
+      parseInt(getResultFromJson(trxJson as JSON.Obj, "version", "int64"))
+    );
+
+    const vinsJson = (trxJson as JSON.Obj).getArr("vins");
+    const vins: VinV2[] = [];
+    if (vinsJson) {
+      for (let j = 0; j < vinsJson.valueOf().length; j++) {
+        const vin = vinsJson.valueOf()[j];
+        vins.push(VinV2.fromJson(vin as JSON.Obj));
+      }
+    }
+
+    const voutsJson = (trxJson as JSON.Obj).getArr("vouts");
+    const vouts: VoutV2[] = [];
+    if (voutsJson) {
+      for (let j = 0; j < voutsJson.valueOf().length; j++) {
+        const vout = voutsJson.valueOf()[j];
+        vouts.push(VoutV2.fromJson(vout as JSON.Obj));
+      }
+    }
+
+    transactions.push(
+      new TransactionV2(hash, <u32>lockTime, <u32>version, vins, vouts)
     );
   }
 
