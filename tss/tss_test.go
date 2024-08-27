@@ -135,19 +135,14 @@ func Test_PartialSign2of3(t *testing.T) {
 
 	comm1 := signer1.Commit()
 	comm2 := signer2.Commit()
-	comm3 := signer3.Commit()
-	comm = append(comm, &comm1, &comm2, &comm3)
+	comm = append(comm, &comm1, &comm2)
 
 	sig := []*frost.SignatureShare{}
 	sigShare2, err := signer2.SignAsParticipant(message, comm)
 	if err != nil {
 		t.Error(err)
 	}
-	sigShare3, err := signer3.SignAsParticipant(message, comm)
-	if err != nil {
-		t.Error(err)
-	}
-	sig = append(sig, &sigShare2, &sigShare3)
+	sig = append(sig, &sigShare2)
 
 	signature, err := signer1.SignAsCoordinator(message, comm, sig)
 	if err != nil {
@@ -160,14 +155,14 @@ func Test_PartialSign2of3(t *testing.T) {
 }
 
 func Test_SignWithoutDKG(t *testing.T) {
-	privkey, _ := hexStringToBytes("c1a341dec8519eccd2ec92ec0f4fca08cc18ea3c630ebafb70cfffa9dd1a72ef")
-	pubkey, _ := hexStringToBytes("0306b653d26799f418ee43af52358d8e1a35586f393517f1e217b6d32ab5fa3c6b")
-	groupPubkey, _ := hexStringToBytes("038313e927d056b3a2a91e2faaf16b7b6e69cada44fc83e11fab3dfd61cc867b8e")
-	signer1 := signer.NewFromStaticKeys("2NEpo7TZRRrLZSi2U", 2, 3, pubkey, groupPubkey, privkey)
+	privkey, _ := hexStringToBytes("460866b60b005caff1ab5114533c4404552fef116f2de26c3948333b673aa82f")
+	pubkey, _ := hexStringToBytes("02d9e571f49b0e1c0d43b4620334b0d522056965b957d71e1b3c5f8cc934254f09")
+	groupPubkey, _ := hexStringToBytes("036c3a1567535bdbad025cb27f872bf3d63efcc85d491feb4e7a9d012c048a7df7")
+	signer1 := signer.NewFromStaticKeys("12D3KooWS5u5JCdm9eZCzDhV1tCNgHzwnd86xfWFTAzicuUjEaSN", 2, 2, privkey, pubkey, groupPubkey)
 
-	privkey, _ = hexStringToBytes("660799dfb1cf5654c8af08bb8bb130aedc9424bfb97e7ce3a629377f134e9155")
-	pubkey, _ = hexStringToBytes("0237e88194f7bfe00106a65ea924a8efc1e499028e6aae0ba14a7b0747ad9ca660")
-	signer2 := signer.NewFromStaticKeys("6J8jK8MZYvJbTW8HD", 2, 3, pubkey, groupPubkey, privkey)
+	privkey, _ = hexStringToBytes("936d7b0a22568ce17c2ff409aa02d06ea086c8e9233ee2585d6ebcfdd3d22bfe")
+	pubkey, _ = hexStringToBytes("035fa39e4a8d3add2a6528861e68089e0343652a825e3be3ac45076bc0e1ab5119")
+	signer2 := signer.NewFromStaticKeys("12D3KooW9wuqbsTYjxBGihtyU674SgHKvFBZMjLsPFcLE3CjRSeK", 2, 2, privkey, pubkey, groupPubkey)
 
 	message := []byte("example")
 	comm := frost.CommitmentList{}
@@ -178,6 +173,7 @@ func Test_SignWithoutDKG(t *testing.T) {
 
 	sig := []*frost.SignatureShare{}
 	sigShare2, err := signer2.SignAsParticipant(message, comm)
+
 	if err != nil {
 		t.Error(err)
 	}

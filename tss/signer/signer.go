@@ -7,6 +7,7 @@ import (
 	"math/big"
 
 	group "github.com/bytemare/crypto"
+	b58 "github.com/mr-tron/base58/base58"
 
 	"github.com/bytemare/frost"
 	"github.com/bytemare/frost/dkg"
@@ -14,8 +15,8 @@ import (
 )
 
 type Signer struct {
-	n              int
-	t              int
+	N              int
+	T              int
 	SecretKey      *group.Scalar
 	dkgData        dkg.Participant
 	participant    frost.Participant
@@ -30,7 +31,12 @@ func New(identifier string, threshold int, maximumAmountOfParticipants int) Sign
 	// Convert base58 encoded string to scalar
 	// following libp2p's standard of peer ID
 	var idBigInt big.Int
-	idBigInt.SetString(identifier, 58)
+	decodedID, err := b58.Decode(identifier)
+	if err != nil {
+		panic(err)
+	}
+
+	idBigInt.SetBytes(decodedID)
 	participantIdentifier := configuration.Ciphersuite.Group.NewScalar()
 	participantIdentifier.SetInt(&idBigInt)
 
@@ -44,8 +50,8 @@ func New(identifier string, threshold int, maximumAmountOfParticipants int) Sign
 	return Signer{
 		Identifier: participantIdentifier,
 		dkgData:    *dkgData,
-		n:          maximumAmountOfParticipants,
-		t:          threshold,
+		N:          maximumAmountOfParticipants,
+		T:          threshold,
 	}
 }
 
@@ -53,14 +59,18 @@ func NewFromStaticKeys(
 	identifier string,
 	threshold int,
 	maximumAmountOfParticipants int,
+	secretKey []byte,
 	publicKey []byte,
 	groupPublicKey []byte,
-	secretKey []byte,
 ) Signer {
 	configuration := frost.Secp256k1.Configuration()
 
 	var idBigInt big.Int
-	idBigInt.SetString(identifier, 58)
+	decodedID, err := b58.Decode(identifier)
+	if err != nil {
+		panic(err)
+	}
+	idBigInt.SetBytes(decodedID)
 	participantIdentifier := configuration.Ciphersuite.Group.NewScalar()
 	participantIdentifier.SetInt(&idBigInt)
 
@@ -84,8 +94,8 @@ func NewFromStaticKeys(
 
 	return Signer{
 		Identifier:     participantIdentifier,
-		n:              maximumAmountOfParticipants,
-		t:              threshold,
+		N:              maximumAmountOfParticipants,
+		T:              threshold,
 		participant:    participant,
 		SecretKey:      privkey,
 		PublicKey:      pubkey,
@@ -219,11 +229,11 @@ func (s *Signer) DKGRound1() []byte {
 
 func (s *Signer) DKGRound2(round1dataBytes [][]byte) ([]byte, error) {
 
-	decodedRound1Data, err := accumulateRound1Data(round1dataBytes, s.n)
+	decodedRound1Data, err := accumulateRound1Data(round1dataBytes, s.N)
 	if err != nil {
 		return []byte{}, err
 	}
-	round1Data := make([]*dkg.Round1Data, 0, s.n)
+	round1Data := make([]*dkg.Round1Data, 0, s.N)
 	round1Data = append(round1Data, decodedRound1Data...)
 
 	round2Data, err := s.dkgData.Continue(round1Data)
@@ -243,7 +253,7 @@ func (s *Signer) DKGRound2(round1dataBytes [][]byte) ([]byte, error) {
 
 func (s *Signer) DKGFinalize(round1dataBytes [][]byte, round2dataBytes [][]byte) error {
 
-	accumulatedRound1Data, err := accumulateRound1Data(round1dataBytes, s.n)
+	accumulatedRound1Data, err := accumulateRound1Data(round1dataBytes, s.N)
 	if err != nil {
 		return err
 	}
@@ -277,6 +287,59 @@ func (s *Signer) Commit() frost.Commitment {
 	return *commitment
 }
 
+func DecodeCommitment(data []byte) (frost.Commitment, error) {
+	elementLength := secp256k1.ElementLength()
+	scalarLength := secp256k1.ScalarLength()
+
+	comm := frost.Commitment{
+		Identifier:   group.Secp256k1.NewScalar(),
+		BindingNonce: group.Secp256k1.NewElement(),
+		HidingNonce:  group.Secp256k1.NewElement(),
+	}
+
+	if err := comm.Identifier.Decode(data[:scalarLength]); err != nil {
+		return comm, err
+	}
+	if err := comm.HidingNonce.Decode(data[scalarLength : scalarLength+elementLength]); err != nil {
+		return comm, err
+	}
+	if err := comm.BindingNonce.Decode(data[scalarLength+elementLength:]); err != nil {
+		return comm, err
+	}
+
+	return comm, nil
+}
+
+func DecodeCommitmentList(data []byte) (frost.CommitmentList, error) {
+	var commitments frost.CommitmentList
+
+	elementLength := secp256k1.ElementLength()
+	scalarLength := secp256k1.ScalarLength()
+
+	reader := bytes.NewReader(data)
+	for {
+
+		buf := make([]byte, scalarLength+elementLength*2)
+		_, err := reader.Read(buf)
+
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return commitments, err
+		}
+
+		comm, err := DecodeCommitment(buf)
+		if err != nil {
+			return commitments, err
+		}
+
+		commitments = append(commitments, &comm)
+	}
+
+	return commitments, nil
+}
+
 // Sign as Participant
 func (s *Signer) SignAsParticipant(message []byte, commitments frost.CommitmentList) (frost.SignatureShare, error) {
 	commitments.Sort()
@@ -291,6 +354,7 @@ func (s *Signer) SignAsParticipant(message []byte, commitments frost.CommitmentL
 
 // Sign as Coordinator and aggregate final signature
 func (s *Signer) SignAsCoordinator(message []byte, commitments frost.CommitmentList, signatureShares []*frost.SignatureShare) (frost.Signature, error) {
+	cs := frost.Secp256k1.Configuration().Ciphersuite
 	commitments.Sort()
 
 	signatureShare, err := s.participant.Sign(message, commitments)
@@ -301,11 +365,27 @@ func (s *Signer) SignAsCoordinator(message []byte, commitments frost.CommitmentL
 	signatureShares = append(signatureShares, signatureShare)
 
 	signature := s.participant.Aggregate(commitments, message, signatureShares)
+	signatureCopy := frost.Signature{
+		R: cs.Group.NewElement(),
+		Z: cs.Group.NewScalar(),
+	}
 
-	cs := frost.Secp256k1.Configuration().Ciphersuite
-	if !frost.Verify(cs, message, signature, s.GroupPublicKey) {
+	signatureCopy.R = signature.R.Copy()
+	signatureCopy.Z = signature.Z.Copy()
+
+	if !frost.Verify(cs, message, &signatureCopy, s.GroupPublicKey) {
 		panic("TODO: find the malicious signer by verifying each share")
 	}
 
 	return *signature, nil
+}
+
+func (s *Signer) VerifySignatureShare(
+	message []byte,
+	targetCommitment *frost.Commitment,
+	commitments frost.CommitmentList,
+	signatureShare *frost.SignatureShare,
+	publicKey *group.Element,
+) bool {
+	return s.participant.VerifySignatureShare(targetCommitment, publicKey, signatureShare.SignatureShare, commitments, message)
 }
