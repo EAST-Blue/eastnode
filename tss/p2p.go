@@ -49,6 +49,11 @@ var (
 	topicNameFlag = flag.String("topicName", "eastnode", "name of topic to join")
 )
 
+// TODO: make these configurable
+const commitmentTimeout time.Duration = 10 * time.Second
+const signatureTimeout time.Duration = 20 * time.Second
+const receivingTimeout time.Duration = commitmentTimeout + signatureTimeout
+
 func Run(ctx context.Context) PeerNode {
 	flag.Var(&addressList, "peerid", "List of peer ID")
 	flag.Parse()
@@ -84,8 +89,6 @@ func Run(ctx context.Context) PeerNode {
 	if err != nil {
 		panic(err)
 	}
-
-	time.Sleep(10 * time.Second)
 
 	return PeerNode{
 		ctx:          ctx,
@@ -195,11 +198,28 @@ func (node *PeerNode) Listen() {
 	}
 }
 
+var messageToSign []byte    // message as coordinator
+var messageToReceive []byte // message as participant
+var commitmentList frost.CommitmentList
+var signatureShares []*frost.SignatureShare
+var finalSignature []byte
+var doneWaitCommitment chan bool
+var doneWaitSignature chan bool
+var doneFROST chan bool
+var doneReceiving chan bool
+var mu sync.Mutex
+
 func (node *PeerNode) StartFROST(message []byte) []byte {
+
+	doneFROST = make(chan bool)
+	doneWaitCommitment = make(chan bool)
+	doneWaitSignature = make(chan bool)
+
+	mu.Lock()
 	signatureShares = nil
 	commitmentList = nil
-	doneFROST = nil
 	messageToSign = message
+	mu.Unlock()
 
 	p := Payload{
 		Command: "COMMITMENT",
@@ -222,14 +242,6 @@ func (node *PeerNode) StartFROST(message []byte) []byte {
 	}
 }
 
-var messageToSign []byte
-var commitmentList frost.CommitmentList
-var signatureShares []*frost.SignatureShare
-var finalSignature []byte
-var doneWaitCommitment chan bool
-var doneWaitSignature chan bool
-var doneFROST chan bool
-
 func (node *PeerNode) processData(data []byte) {
 	var decoded Payload
 	err := json.Unmarshal(data, &decoded)
@@ -245,6 +257,21 @@ func (node *PeerNode) processData(data []byte) {
 	switch decoded.Command {
 	case "COMMITMENT":
 
+		if messageToReceive == nil {
+			log.Printf("Receiving message %s to be signed", decoded.Message)
+			mu.Lock()
+			messageToReceive = []byte(decoded.Message)
+			mu.Unlock()
+		} else {
+			log.Printf("Receiving %s while processing %s, ignoring request", decoded.Message, string(messageToReceive))
+			return
+		}
+
+		// TODO: implement rejection scenario in case of invalid message
+
+		doneReceiving = make(chan bool)
+		node.waitAsParticipant()
+
 		commitment := node.Frost.Commit()
 
 		dataToPublish := Payload{
@@ -258,15 +285,28 @@ func (node *PeerNode) processData(data []byte) {
 
 	case "COMMITMENT_SHARE":
 
+		if decoded.Message != string(messageToSign) {
+			log.Printf("Receiving %s while processing %s, ignoring request", decoded.Message, string(messageToSign))
+			return
+		}
+
 		commitment, err := signer.DecodeCommitment(decoded.Package)
 		if err != nil {
 			log.Println(err)
 			return
 		}
 
+		mu.Lock()
 		commitmentList = append(commitmentList, &commitment)
+		mu.Unlock()
 
 	case "SIGN":
+
+		if decoded.Message != string(messageToReceive) {
+			log.Printf("Receiving %s while processing %s, ignoring request", decoded.Message, string(messageToReceive))
+			return
+		}
+
 		commitmentList, err := signer.DecodeCommitmentList(decoded.Package)
 		if err != nil {
 			log.Println(err)
@@ -287,8 +327,15 @@ func (node *PeerNode) processData(data []byte) {
 		}
 
 		node.Publish(dataToPublish)
+		doneReceiving <- true
 
 	case "SIGNATURE_SHARE":
+
+		if decoded.Message != string(messageToSign) {
+			log.Printf("Receiving %s while processing %s, ignoring request", decoded.Message, string(messageToSign))
+			return
+		}
+
 		configuration := frost.Secp256k1.Configuration()
 
 		sigShare, err := configuration.DecodeSignatureShare(decoded.Package)
@@ -297,7 +344,9 @@ func (node *PeerNode) processData(data []byte) {
 			return
 		}
 
+		mu.Lock()
 		signatureShares = append(signatureShares, sigShare)
+		mu.Unlock()
 
 	default:
 		log.Println("Ignoring message: ", string(decoded.Command))
@@ -306,7 +355,9 @@ func (node *PeerNode) processData(data []byte) {
 
 func (node *PeerNode) broadcastCommitmentList() {
 	selfCommitment := node.Frost.Commit()
+	mu.Lock()
 	commitmentList = append(commitmentList, &selfCommitment)
+	mu.Unlock()
 
 	dataToPublish := Payload{
 		Command: "SIGN",
@@ -336,11 +387,10 @@ func (node *PeerNode) aggregateSignature() {
 func (node *PeerNode) waitForCommitment() {
 	go func() {
 		for {
-			if len(commitmentList) == node.Frost.N-1 {
+			if len(commitmentList) >= node.Frost.N-1 {
 				doneWaitCommitment <- true
 				break
 			}
-			time.Sleep(10 * time.Millisecond)
 		}
 	}()
 
@@ -348,7 +398,10 @@ func (node *PeerNode) waitForCommitment() {
 		select {
 		case <-doneWaitCommitment:
 			node.broadcastCommitmentList()
-		case <-time.After(5 * time.Second):
+		case <-time.After(commitmentTimeout):
+			// After certain seconds, process should continue
+			// if collected commitments are above threshold (including self), continue
+			// else raise timeout
 			if len(commitmentList) >= node.Frost.T-1 {
 				node.broadcastCommitmentList()
 			} else {
@@ -361,11 +414,10 @@ func (node *PeerNode) waitForCommitment() {
 func (node *PeerNode) waitForSignatureShare() {
 	go func() {
 		for {
-			if len(commitmentList) == node.Frost.N-1 {
+			if len(signatureShares) >= node.Frost.N-1 {
 				doneWaitSignature <- true
 				break
 			}
-			time.Sleep(10 * time.Millisecond)
 		}
 	}()
 
@@ -373,13 +425,31 @@ func (node *PeerNode) waitForSignatureShare() {
 		select {
 		case <-doneWaitSignature:
 			node.aggregateSignature()
-		case <-time.After(10 * time.Second):
-			if len(commitmentList) >= node.Frost.T-1 {
+		case <-time.After(signatureTimeout):
+			// After certain seconds, process should continue
+			// if collected signatureShares are above threshold (including self), continue
+			// else raise timeout
+			if len(signatureShares) >= node.Frost.T-1 {
 				node.aggregateSignature()
 			} else {
 				log.Println("Timeout for waiting signature share from other peers")
 				doneFROST <- false
 			}
+		}
+	}()
+}
+
+func (node *PeerNode) waitAsParticipant() {
+	go func() {
+		select {
+		case <-doneReceiving:
+			mu.Lock()
+			messageToReceive = nil
+			mu.Unlock()
+		case <-time.After(receivingTimeout):
+			mu.Lock()
+			messageToReceive = nil
+			mu.Unlock()
 		}
 	}()
 }
