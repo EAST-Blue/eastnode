@@ -22,9 +22,13 @@ export class TableOption {
   primaryKey: string;
   // Default indexes are using btree, TODO: add more options
   indexes: string[];
-  constructor(primaryKey: string, indexes: string[]) {
+  // MediumTexts are using text type mediumtext for the column
+  mediumTexts: string[];
+
+  constructor(primaryKey: string, indexes: string[], mediumTexts: string[]) {
     this.primaryKey = primaryKey;
     this.indexes = indexes;
+    this.mediumTexts = mediumTexts;
   }
 
   toJson(): string {
@@ -34,6 +38,15 @@ export class TableOption {
     for (let i = 0; i < this.indexes.length; i++) {
       obj += `"${this.indexes[i]}"`;
       if (i < this.indexes.length - 1) {
+        obj += ",";
+      }
+    }
+    obj += "]";
+    obj += ",";
+    obj += `"mediumTexts": [`;
+    for (let i = 0; i < this.mediumTexts.length; i++) {
+      obj += `"${this.mediumTexts[i]}"`;
+      if (i < this.mediumTexts.length - 1) {
         obj += ",";
       }
     }
@@ -275,7 +288,6 @@ export function create(
   tableSchema: TableSchema,
   option: TableOption
 ): void {
-  consoleLog(option.toJson());
   createTable(tableName, toStringSchema(tableSchema), option.toJson());
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"slices"
 
 	"github.com/iancoleman/strcase"
 	dynamicstruct "github.com/ompluscator/dynamic-struct"
@@ -13,8 +14,9 @@ import (
 var ContractTableSeparator string = "_"
 
 type TableOption struct {
-	PrimaryKey string
-	Indexes    []string
+	PrimaryKey  string
+	Indexes     []string
+	MediumTexts []string
 }
 
 func CreateTable(s store.Store, contractAddress string, tableName string, schema string, option string) {
@@ -43,7 +45,11 @@ func CreateTable(s store.Store, contractAddress string, tableName string, schema
 		if opt.PrimaryKey == k {
 			instance.AddField(strcase.ToCamel(k), vType, `bun:",pk"`)
 		} else {
-			instance.AddField(strcase.ToCamel(k), vType, `bun:"type:mediumtext"`)
+			if slices.Contains(opt.MediumTexts, k) {
+				instance.AddField(strcase.ToCamel(k), vType, `bun:"type:mediumtext"`)
+			} else {
+				instance.AddField(strcase.ToCamel(k), vType, "")
+			}
 		}
 	}
 
