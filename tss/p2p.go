@@ -1,12 +1,10 @@
 package tss
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"flag"
 	"log"
-	"os"
 	"slices"
 	"sync"
 	"time"
@@ -67,11 +65,11 @@ func Run(ctx context.Context) PeerNode {
 		panic(err)
 	}
 
-	t, n, p, g, s, err := LoadFrostKey()
+	t, n, s, p, g, err := LoadFrostKey()
 	if err != nil {
 		panic(err)
 	}
-	frostInstance := signer.NewFromStaticKeys(h.ID().String(), t, n, p, g, s)
+	frostInstance := signer.NewFromStaticKeys(h.ID().String(), t, n, s, p, g)
 
 	discoverPeers(ctx, h)
 
@@ -83,7 +81,6 @@ func Run(ctx context.Context) PeerNode {
 	if err != nil {
 		panic(err)
 	}
-	go streamConsoleTo(ctx, topic)
 
 	sub, err := topic.Subscribe()
 	if err != nil {
@@ -161,19 +158,6 @@ func discoverPeers(ctx context.Context, h host.Host) {
 	log.Println("Peer discovery complete")
 }
 
-func streamConsoleTo(ctx context.Context, topic *pubsub.Topic) {
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		s, err := reader.ReadString('\n')
-		if err != nil {
-			panic(err)
-		}
-		if err := topic.Publish(ctx, []byte(s)); err != nil {
-			log.Println("Publish error:", err)
-		}
-	}
-}
-
 func (node *PeerNode) Publish(p Payload) {
 
 	data, err := json.Marshal(p)
@@ -194,7 +178,7 @@ func (node *PeerNode) Listen() {
 			panic(err)
 		}
 		log.Println(m.ReceivedFrom, ": ", string(m.Message.Data))
-		node.processData(m.Message.Data)
+		node.processData(m.Message.Data, m.ReceivedFrom.String())
 	}
 }
 
@@ -242,7 +226,7 @@ func (node *PeerNode) StartFROST(message []byte) []byte {
 	}
 }
 
-func (node *PeerNode) processData(data []byte) {
+func (node *PeerNode) processData(data []byte, source string) {
 	var decoded Payload
 	err := json.Unmarshal(data, &decoded)
 	if err != nil {
@@ -250,6 +234,13 @@ func (node *PeerNode) processData(data []byte) {
 		return
 	}
 
+	// ignore if sender ID is different with original source
+	if decoded.Sender != source {
+		log.Printf("Impersonation from %s to %s detected, ignoring message", source, decoded.Sender)
+		return
+	}
+
+	// ignore if sender is self
 	if decoded.Sender == node.Host.ID().String() {
 		return
 	}
