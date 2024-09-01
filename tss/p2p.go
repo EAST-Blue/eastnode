@@ -96,6 +96,10 @@ func Run(ctx context.Context) PeerNode {
 	}
 }
 
+func (node *PeerNode) Close() {
+	node.Host.Close()
+}
+
 func initDHT(ctx context.Context, h host.Host) *dht.IpfsDHT {
 	// Start a DHT, for use in peer discovery. We can't just make a new DHT
 	// client because we want each peer to maintain its own local copy of the
@@ -177,8 +181,8 @@ func (node *PeerNode) Listen() {
 		if err != nil {
 			panic(err)
 		}
-		log.Println(m.ReceivedFrom, ": ", string(m.Message.Data))
-		node.processData(m.Message.Data, m.ReceivedFrom.String())
+		log.Println(m.GetFrom().String(), ": ", string(m.Message.Data))
+		node.processData(m.Message.Data, m.GetFrom().String())
 	}
 }
 
