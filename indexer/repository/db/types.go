@@ -137,6 +137,15 @@ type TransactionV1 struct {
 	Vouts []VoutV1 `json:"vouts"`
 }
 
+type TransactionV2 struct {
+	Hash     string `json:"hash"`
+	LockTime uint32 `json:"lock_time"`
+	Version  uint32 `json:"version"`
+
+	Vins  []Vin  `json:"vins"`
+	Vouts []Vout `json:"vouts"`
+}
+
 func NewDB(dialector gorm.Dialector, opts ...gorm.Option) (*gorm.DB, error) {
 	db, err := gorm.Open(dialector, opts...)
 	if err != nil {

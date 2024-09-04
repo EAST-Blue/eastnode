@@ -445,3 +445,101 @@ func (d *DBRepository) GetTransactionV1s(hash string) ([]*TransactionV1, error) 
 
 	return transactionV1s, nil
 }
+
+func (d *DBRepository) GetTransactionV2sByBlockHeight(height uint64) ([]*TransactionV2, error) {
+	hash, err := d.GetBlockHeightByHash(height)
+	if err != nil {
+		return nil, err
+	}
+
+	if hash == nil {
+		return []*TransactionV2{}, nil
+	}
+
+	return d.GetTransactionV2s(*hash)
+}
+
+func (d *DBRepository) GetTransactionV2s(hash string) ([]*TransactionV2, error) {
+	transactionV2s := []*TransactionV2{}
+	transactions := []*Transaction{}
+
+	if resp := d.Db.Order("block_index asc").Where("block_hash = ? ", hash).Find(&transactions); resp.Error != nil {
+		return nil, resp.Error
+	}
+	if len(transactions) == 0 {
+		return transactionV2s, nil
+	}
+
+	txHashes := []string{}
+
+	for _, tx := range transactions {
+		txHashes = append(txHashes, tx.Hash)
+	}
+
+	vins := []*Vin{}
+	vouts := []*Vout{}
+
+	if resp := d.Db.Order("tx_index asc").Where("tx_hash IN ? ", txHashes).Find(&vins); resp.Error != nil {
+		return nil, resp.Error
+	}
+	if resp := d.Db.Order("tx_index asc").Where("tx_hash IN ? ", txHashes).Find(&vouts); resp.Error != nil {
+		return nil, resp.Error
+	}
+	vinV2s := map[string][]Vin{}
+	voutV2s := map[string][]Vout{}
+
+	for _, vin := range vins {
+
+		// TODO: refactor
+
+		if vin.SignatureScript != "" {
+			scripts, err := ParseP2shSigHexToAsms(vin.SignatureScript)
+			if err == nil {
+				vin.P2shAsmScripts = scripts
+			}
+		}
+
+		if vin.PkScript != "" {
+			bs, err := bscript.NewFromHexString(vin.PkScript)
+			if err == nil {
+				asm, err := bs.ToASM()
+				if err == nil {
+					scripts := strings.Split(asm, " ")
+					vin.PkAsmScripts = &scripts
+				}
+			}
+
+		}
+
+		if vin.Witness != "" {
+			witnesses := strings.Split(vin.Witness, ",")
+			if len(witnesses) == 3 {
+				bs, err := bscript.NewFromHexString(witnesses[1])
+				if err == nil {
+					asm, err := bs.ToASM()
+					if err == nil {
+						scripts := strings.Split(asm, " ")
+						vin.WitnessAsmScripts = &scripts
+					}
+				}
+			}
+		}
+		vinV2s[vin.TxHash] = append(vinV2s[vin.TxHash], *vin)
+	}
+
+	for _, vout := range vouts {
+		voutV2s[vout.TxHash] = append(voutV2s[vout.TxHash], *vout)
+	}
+
+	for _, tx := range transactions {
+		transactionV2s = append(transactionV2s, &TransactionV2{
+			Hash:     tx.Hash,
+			LockTime: tx.LockTime,
+			Version:  uint32(tx.Version),
+			Vins:     vinV2s[tx.Hash],
+			Vouts:    voutV2s[tx.Hash],
+		})
+	}
+
+	return transactionV2s, nil
+}
