@@ -4,11 +4,13 @@ export class VinV1 {
   txHash: string;
   index: u32;
   value: u64;
+  witness: string[];
 
-  constructor(txHash: string, index: u32, value: u64) {
+  constructor(txHash: string, index: u32, value: u64, witness: string[]) {
     this.txHash = txHash;
     this.index = index;
     this.value = value;
+    this.witness = witness;
   }
 
   toJson(): string {
@@ -19,7 +21,9 @@ export class VinV1 {
       this.index.toString() +
       ', "value": ' +
       this.value.toString() +
-      " }"
+      ', "witness": [' +
+      this.witness.map<string>((w: string) => '"' + w + '"').join(",") +
+      "] }"
     );
   }
 }
