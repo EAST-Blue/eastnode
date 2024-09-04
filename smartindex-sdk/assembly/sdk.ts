@@ -12,9 +12,11 @@ import {
   envGetTransactionV1sByBlockHeight,
   envGetNetwork,
   consoleLog,
+  envGetTransactionByHash,
+  envGetLastHeight,
 } from "./env";
 import { Value } from "assemblyscript-json/assembly/JSON";
-import { TransactionV1, VinV1, VoutV1 } from "./types";
+import { TransactionV1, TransactionV3, VinV1, VoutV1 } from "./types";
 import { Network } from "./constants";
 
 export class TableOption {
@@ -414,7 +416,8 @@ export function getTransactionV1sByBlockHeight(height: u64): TransactionV1[] {
           new VinV1(
             getResultFromJson(vin as JSON.Obj, "tx_hash", "string"),
             <u32>parseInt(getResultFromJson(vin as JSON.Obj, "index", "int64")),
-            <u64>parseInt(getResultFromJson(vin as JSON.Obj, "value", "int64"))
+            <u64>parseInt(getResultFromJson(vin as JSON.Obj, "value", "int64")),
+            getResultFromJson(vin as JSON.Obj, "witness", "string").split(",")
           )
         );
       }
@@ -459,4 +462,51 @@ export function getNetwork(): Network {
   } else {
     return Network.Regtest;
   }
+}
+
+export function getLastHeight(): u32 {
+  const lastHeightStr = ptrToString(envGetLastHeight());
+  consoleLog("LAST HEIGHT:");
+  consoleLog(lastHeightStr);
+  return u32(parseInt(lastHeightStr));
+}
+
+export function getTransactionByHash(_hash: string): TransactionV3 | null {
+  const transactionPtr = envGetTransactionByHash(_hash);
+  const str = ptrToString(transactionPtr)
+  if(str === "null") {
+    return null
+  }
+
+  const jsonTransaction = toJson(str);
+
+  const hash = getResultFromJson(jsonTransaction, "hash", "string");
+  const lockTime = <u32>(
+    parseInt(getResultFromJson(jsonTransaction, "lock_time", "int64"))
+  );
+  const version = <u32>(
+    parseInt(getResultFromJson(jsonTransaction, "version", "int64"))
+  );
+  const safe = getResultFromJson(jsonTransaction, "safe", "string") === "true";
+  const blockId = <u32>(
+    parseInt(getResultFromJson(jsonTransaction, "block_id", "int64"))
+  );
+  const blockHash = getResultFromJson(jsonTransaction, "block_hash", "string");
+  const blockHeight = <u64>(
+    parseInt(getResultFromJson(jsonTransaction, "block_height", "int64"))
+  );
+  const blockIndex = <u32>(
+    parseInt(getResultFromJson(jsonTransaction, "block_index", "int64"))
+  );
+
+  return new TransactionV3(
+    hash,
+    lockTime,
+    version,
+    safe,
+    blockId,
+    blockHash,
+    blockHeight,
+    blockIndex
+  );
 }

@@ -376,6 +376,20 @@ func (d *DBRepository) GetTransactionV1sByBlockHeight(height uint64) ([]*Transac
 	return d.GetTransactionV1s(*hash)
 }
 
+func (d *DBRepository) GetTransactionByHash(hash string) (*Transaction, error) {
+	transaction := Transaction{}
+	res := d.Db.Where("hash = ?", hash).First(&transaction)
+	if res.Error != nil {
+		if res.Error == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+
+		return nil, res.Error
+	}
+
+	return &transaction, nil
+}
+
 func (d *DBRepository) GetTransactionV1s(hash string) ([]*TransactionV1, error) {
 	transactionV1s := []*TransactionV1{}
 	transactions := []*Transaction{}
@@ -402,9 +416,10 @@ func (d *DBRepository) GetTransactionV1s(hash string) ([]*TransactionV1, error) 
 		vinV1s := []VinV1{}
 		for _, vin := range vins {
 			vinV1s = append(vinV1s, VinV1{
-				TxHash: vin.FundingTxHash,
-				Index:  vin.FundingTxIndex,
-				Value:  uint64(vin.Value),
+				TxHash:  vin.FundingTxHash,
+				Index:   vin.FundingTxIndex,
+				Value:   uint64(vin.Value),
+				Witness: vin.Witness,
 			})
 		}
 
