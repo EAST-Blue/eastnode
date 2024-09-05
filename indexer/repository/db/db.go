@@ -401,45 +401,54 @@ func (d *DBRepository) GetTransactionV1s(hash string) ([]*TransactionV1, error) 
 		return transactionV1s, nil
 	}
 
+	txHashes := []string{}
 	for _, tx := range transactions {
-		vins := []*Vin{}
-		vouts := []*Vout{}
+		txHashes = append(txHashes, tx.Hash)
+	}
 
-		// TODO: use promise to get vins and vouts
-		if resp := d.Db.Order("tx_index asc").Where("tx_hash = ? ", tx.Hash).Find(&vins); resp.Error != nil {
-			return nil, resp.Error
-		}
-		if resp := d.Db.Order("tx_index asc").Where("tx_hash = ? ", tx.Hash).Find(&vouts); resp.Error != nil {
-			return nil, resp.Error
-		}
+	for _, tx := range transactions {
+		txHashes = append(txHashes, tx.Hash)
+	}
 
-		vinV1s := []VinV1{}
-		for _, vin := range vins {
-			vinV1s = append(vinV1s, VinV1{
-				TxHash:  vin.FundingTxHash,
-				Index:   vin.FundingTxIndex,
-				Value:   uint64(vin.Value),
-				Witness: vin.Witness,
-			})
-		}
+	vins := []*Vin{}
+	vouts := []*Vout{}
 
-		voutV1s := []VoutV1{}
-		for _, vout := range vouts {
-			voutV1s = append(voutV1s, VoutV1{
-				TxHash:   vout.TxHash,
-				Index:    vout.TxIndex,
-				Address:  vout.Spender,
-				Value:    uint64(vout.Value),
-				PkScript: vout.PkScript,
-			})
-		}
+	if resp := d.Db.Order("tx_index asc").Where("tx_hash IN ? ", txHashes).Find(&vins); resp.Error != nil {
+		return nil, resp.Error
+	}
+	if resp := d.Db.Order("tx_index asc").Where("tx_hash IN ? ", txHashes).Find(&vouts); resp.Error != nil {
+		return nil, resp.Error
+	}
 
+	vinV1s := map[string][]VinV1{}
+	voutV1s := map[string][]VoutV1{}
+
+	for _, vin := range vins {
+		vinV1s[vin.TxHash] = append(vinV1s[vin.TxHash], VinV1{
+			TxHash:  vin.FundingTxHash,
+			Index:   vin.FundingTxIndex,
+			Value:   uint64(vin.Value),
+			Witness: vin.Witness,
+		})
+	}
+
+	for _, vout := range vouts {
+		voutV1s[vout.TxHash] = append(voutV1s[vout.TxHash], VoutV1{
+			TxHash:   vout.TxHash,
+			Index:    vout.TxIndex,
+			Address:  vout.Spender,
+			Value:    uint64(vout.Value),
+			PkScript: vout.PkScript,
+		})
+	}
+
+	for _, tx := range transactions {
 		transactionV1s = append(transactionV1s, &TransactionV1{
 			Hash:     tx.Hash,
 			LockTime: tx.LockTime,
 			Version:  uint32(tx.Version),
-			Vins:     vinV1s,
-			Vouts:    voutV1s,
+			Vins:     vinV1s[tx.Hash],
+			Vouts:    voutV1s[tx.Hash],
 		})
 	}
 
