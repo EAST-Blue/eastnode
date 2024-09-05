@@ -114,9 +114,10 @@ type Vout struct {
 }
 
 type VinV1 struct {
-	TxHash string `json:"tx_hash"`
-	Index  uint32 `json:"index"`
-	Value  uint64 `json:"value"`
+	TxHash  string `json:"tx_hash"`
+	Index   uint32 `json:"index"`
+	Value   uint64 `json:"value"`
+	Witness string `json:"witness"`
 }
 
 type VoutV1 struct {

@@ -4,11 +4,13 @@ export class VinV1 {
   txHash: string;
   index: u32;
   value: u64;
+  witness: string[];
 
-  constructor(txHash: string, index: u32, value: u64) {
+  constructor(txHash: string, index: u32, value: u64, witness: string[]) {
     this.txHash = txHash;
     this.index = index;
     this.value = value;
+    this.witness = witness;
   }
 
   toJson(): string {
@@ -19,7 +21,9 @@ export class VinV1 {
       this.index.toString() +
       ', "value": ' +
       this.value.toString() +
-      " }"
+      ', "witness": [' +
+      this.witness.map<string>((w: string) => '"' + w + '"').join(",") +
+      "] }"
     );
   }
 }
@@ -263,5 +267,58 @@ export class TransactionV2 {
     this.version = version;
     this.vins = vins;
     this.vouts = vouts;
+  }
+}
+
+export class TransactionV3 {
+  hash: string;
+  lockTime: u32;
+  version: u32;
+  safe: bool;
+  blockId: u32;
+  blockHash: string;
+  blockHeight: u64;
+  blockIndex: u32;
+
+  constructor(
+    hash: string,
+    lockTime: u32,
+    version: u32,
+    safe: bool,
+    blockId: u32,
+    blockHash: string,
+    blockHeight: u64,
+    blockIndex: u32
+  ) {
+    this.hash = hash;
+    this.lockTime = lockTime;
+    this.version = version;
+    this.safe = safe;
+    this.blockId = blockId;
+    this.blockHash = blockHash;
+    this.blockHeight = blockHeight;
+    this.blockIndex = blockIndex;
+  }
+
+  toJson(): string {
+    return (
+      '{ "hash": "' +
+      this.hash +
+      '", "lockTime": ' +
+      this.lockTime.toString() +
+      ', "version": ' +
+      this.version.toString() +
+      ', "safe": ' +
+      this.safe.toString() +
+      ', "blockId": ' +
+      this.blockId.toString() +
+      ', "blockHash": "' +
+      this.blockHash +
+      '", "blockHeight": ' +
+      this.blockHeight.toString() +
+      ', "blockIndex": ' +
+      this.blockIndex.toString() +
+      " }"
+    );
   }
 }

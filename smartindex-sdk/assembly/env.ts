@@ -44,5 +44,11 @@ export declare function envGetNetwork(): i32;
 @external("env", "getTransactionV1sByBlockHeight")
 export declare function envGetTransactionV1sByBlockHeight(height: u64): i32;
 
+@external("env", "getLastHeight")
+export declare function envGetLastHeight(): i32;
+
+@external("env", "getTransactionByHash")
+export declare function envGetTransactionByHash(hash: string): i32;
+
 @external("env", "getTransactionV2sByBlockHeight")
 export declare function envGetTransactionV2sByBlockHeight(height: u64): i32;

@@ -295,7 +295,35 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 
 			return uint32(ptr)
 		}).
-		Export("getNetwork")
+		Export("getNetwork").
+		NewFunctionBuilder().
+		WithFunc(func() uint32 {
+			result, err := r.IndexerDbRepo.GetLastHeight()
+			if err != nil {
+				panic(err)
+			}
+			serializedResult, _ := json.Marshal(result)
+
+			ptr := r.writeString(r.Mod.Memory(), string(serializedResult))
+
+			return uint32(ptr)
+		}).
+		Export("getLastHeight").
+		NewFunctionBuilder().
+		WithFunc(func(hashPtr uint32) uint32 {
+			hash := ToString(r.Mod.Memory(), hashPtr)
+
+			result, err := r.IndexerDbRepo.GetTransactionByHash(hash)
+			if err != nil {
+				panic(err)
+			}
+			serializedResult, _ := json.Marshal(result)
+
+			ptr := r.writeString(r.Mod.Memory(), string(serializedResult))
+
+			return uint32(ptr)
+		}).
+		Export("getTransactionByHash")
 
 	assemblyscript.NewFunctionExporter().
 		ExportFunctions(envBuilder)
