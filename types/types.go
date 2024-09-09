@@ -109,6 +109,11 @@ type CommonServerQuery struct {
 	Args         []string `json:"args"`
 }
 
+type BitcoinServerQuery struct {
+	Method string        `json:"method"`
+	Params []interface{} `json:"params"`
+}
+
 type ServerQueryReply struct {
 	BlockHash   string `json:"block_hash"`
 	BlockHeight uint64 `json:"block_height"`
