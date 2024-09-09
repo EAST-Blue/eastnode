@@ -2,6 +2,7 @@ package bitcoin
 
 import (
 	"bytes"
+	"log"
 
 	"encoding/base64"
 	"encoding/json"
@@ -51,6 +52,8 @@ func (b *BitcoinRepository) rpc(method string, params []json.RawMessage) ([]byte
 	}
 
 	if res.StatusCode != 200 {
+		body, _ := io.ReadAll(res.Body)
+		log.Println(string(body))
 		return nil, fmt.Errorf("errors.request status code: %d", res.StatusCode)
 	}
 
@@ -122,4 +125,41 @@ func (b *BitcoinRepository) GetBlockCount() (int32, error) {
 	_ = json.Unmarshal(resBytes, &getBlockCount)
 
 	return getBlockCount.Result, nil
+}
+
+func (b *BitcoinRepository) ForwardRPC(method string, params []interface{}) (json.RawMessage, error) {
+	// Convert params to json.RawMessage
+	paramsJson := make([]json.RawMessage, len(params))
+	for i, param := range params {
+		jsonParam, err := json.Marshal(param)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal parameter: %v", err)
+		}
+		paramsJson[i] = jsonParam
+	}
+
+	// Call the existing rpc method
+	resBytes, err := b.rpc(method, paramsJson)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse the response
+	var response struct {
+		Result json.RawMessage `json:"result"`
+		Error  *struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(resBytes, &response); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %v", err)
+	}
+
+	// Check for RPC error
+	if response.Error != nil {
+		return nil, fmt.Errorf("RPC error (code %d): %s", response.Error.Code, response.Error.Message)
+	}
+
+	return response.Result, nil
 }

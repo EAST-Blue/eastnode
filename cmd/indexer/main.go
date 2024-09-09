@@ -5,10 +5,11 @@ import (
 	"eastnode/indexer/repository/bitcoin"
 	"eastnode/indexer/repository/db"
 	storeDB "eastnode/utils/store"
+	"os"
 )
 
 func main() {
-	bitcoinRepo := bitcoin.NewBitcoinRepo("http://localhost:18443", "east", "east")
+	bitcoinRepo := bitcoin.NewBitcoinRepo(os.Getenv("BTC_RPC_URL"), "east", "east")
 	s := storeDB.GetInstance(storeDB.IndexerDB)
 	dbRepo := db.NewDBRepository(s.Gorm)
 	indexerRepo := indexer.NewIndexer(dbRepo, bitcoinRepo)
