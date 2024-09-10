@@ -86,6 +86,8 @@ func (r *WasmRuntime) writeString(memory api.Memory, str string) uint32 {
 func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndexAddress string, signer Address, kind types.ActionKind, output *string, errorMessage *error) api.Module {
 	wazeroRuntime := wazero.NewRuntime(ctx)
 
+	runeExternal := NewRuneExternal()
+
 	envBuilder := wazeroRuntime.
 		NewHostModuleBuilder("env").
 		NewFunctionBuilder().
@@ -323,7 +325,67 @@ func (r *WasmRuntime) loadWasm(wasmBytes []byte, ctx context.Context, smartIndex
 
 			return uint32(ptr)
 		}).
-		Export("getTransactionByHash")
+		Export("getTransactionByHash").
+		NewFunctionBuilder().
+		WithFunc(func(idPtr uint32) uint32 {
+			id := ToString(r.Mod.Memory(), idPtr)
+
+			result, err := runeExternal.GetEtchingById(id) 
+			if err != nil {
+				panic(err)
+			}
+			serializedResult, _ := json.Marshal(result)
+
+			ptr := r.writeString(r.Mod.Memory(), string(serializedResult))
+
+			return uint32(ptr)
+		}).
+		Export("getEtchingById").
+		NewFunctionBuilder().
+		WithFunc(func(addressPtr uint32) uint32 {
+			address := ToString(r.Mod.Memory(), addressPtr)
+
+			result, err := runeExternal.GetAddressBalancesByAddress(address) 
+			if err != nil {
+				panic(err)
+			}
+			serializedResult, _ := json.Marshal(result)
+
+			ptr := r.writeString(r.Mod.Memory(), string(serializedResult))
+
+			return uint32(ptr)
+		}).
+		Export("getAddressBalancesByAddress").
+		NewFunctionBuilder().
+		WithFunc(func(addressPtr uint32) uint32 {
+			address := ToString(r.Mod.Memory(), addressPtr)
+
+			result, err := runeExternal.GetActivitiesByAddress(address) 
+			if err != nil {
+				panic(err)
+			}
+			serializedResult, _ := json.Marshal(result)
+
+			ptr := r.writeString(r.Mod.Memory(), string(serializedResult))
+
+			return uint32(ptr)
+		}).
+		Export("getActivitiesByAddress").
+		NewFunctionBuilder().
+		WithFunc(func(txidPtr uint32) uint32 {
+			txid := ToString(r.Mod.Memory(), txidPtr)
+
+			result, err := runeExternal.GetActivitiesByTxid(txid) 
+			if err != nil {
+				panic(err)
+			}
+			serializedResult, _ := json.Marshal(result)
+
+			ptr := r.writeString(r.Mod.Memory(), string(serializedResult))
+
+			return uint32(ptr)
+		}).
+		Export("getActivitiesByTxid")
 
 	assemblyscript.NewFunctionExporter().
 		ExportFunctions(envBuilder)
